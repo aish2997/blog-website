@@ -72,11 +72,11 @@ jobs:
           workload_identity_provider: "projects/${{ vars.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/${{ vars.POOL_NAME }}/providers/${{ vars.PROVIDER_NAME }}"
           service_account: "github-actions-sa@${{ vars.PROJECT_ID }}.iam.gserviceaccount.com"
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v1
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1.1.0
         with:
-          terraform_version: '1.5.0'
-
+          project_id: ${{ vars.PROJECT_ID }}
+  
       - name: Terraform Init
         run: |
           terraform init \
