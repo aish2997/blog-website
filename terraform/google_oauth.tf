@@ -3,7 +3,6 @@ resource "google_iap_brand" "oauth_clients" {
 
   support_email     = each.value.support_email
   application_title = each.value.application_title
-  org_internal_only = false
 }
 
 resource "random_password" "oauth_secret" {
