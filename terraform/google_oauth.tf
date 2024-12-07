@@ -17,7 +17,6 @@ resource "google_iap_client" "oauth_clients" {
 
   brand        = google_iap_brand.oauth_clients[each.key].name
   display_name = each.value.client_name
-  secret       = random_password.oauth_secret[each.key].result
 }
 
 output "oauth_client_secrets" {
