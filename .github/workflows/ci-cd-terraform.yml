@@ -7,41 +7,43 @@ on:
   workflow_dispatch:  # Allows manual triggering of the workflow
 
 jobs:
-  terraform:
+  deploy:
     runs-on: ubuntu-latest
 
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Google Cloud credentials using WIF
-      id: auth
-      uses: google-github-actions/auth@v1
-      with:
-        # Reference the GCP service account configured for Workload Identity Federation
-        workload_identity_provider: projects/${{ secrets.GCP_PROJECT_ID }}/locations/global/workloadIdentityPools/${{ secrets.GCP_WIF_POOL }}/providers/${{ secrets.GCP_WIF_PROVIDER }}
-        service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-        audience: "identitynamespace/${{ secrets.GCP_PROJECT_ID }}"
+      - name: Authenticate to GCP
+        id: auth
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: "projects/179296069976/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider"
+          service_account: "github-actions-sa@blog-website-d.iam.gserviceaccount.com"
 
-    - name: Set up Terraform
-      uses: hashicorp/setup-terraform@v1
-      with:
-        terraform_version: 1.5.5  # Use the required Terraform version
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.5.5  # Use the required Terraform version
 
-    - name: Change working directory to terraform/
-      run: cd terraform
+      - name: Change working directory to terraform/
+        run: cd terraform
 
-    - name: Initialize Terraform
-      run: terraform init
+      - name: Initialize Terraform
+        run: terraform init
 
-    - name: Validate Terraform configuration
-      run: terraform validate
+      - name: Validate Terraform configuration
+        run: terraform validate
 
-    - name: Plan Terraform deployment
-      run: terraform plan -out=tfplan
+      - name: Plan Terraform deployment
+        run: terraform plan -out=tfplan
 
-    - name: Apply Terraform configuration
-      run: terraform apply -auto-approve tfplan
+      - name: Apply Terraform configuration
+        run: terraform apply -auto-approve tfplan
 
-    - name: Output Terraform state
-      run: terraform output
+      - name: Output Terraform state
+        run: terraform output
