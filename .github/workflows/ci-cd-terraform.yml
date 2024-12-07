@@ -1,10 +1,17 @@
 name: Terraform CI/CD
 
 on:
-  # push:
-  #   branches:
-  #     - main
-  workflow_dispatch:  # Allows manual triggering of the workflow
+  push:
+    branches:
+      - main
+      - integration
+
+  workflow_dispatch:
+    inputs:
+      branch_name:
+        description: 'Branch name to determine environment'
+        required: false
+        default: 'main'
 
 jobs:
   deploy:
@@ -18,12 +25,47 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Determine Environment
+        id: env
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "environment=prod" >> $GITHUB_ENV
+          elif [[ "${{ github.ref_name }}" == "integration" ]]; then
+            echo "environment=test" >> $GITHUB_ENV
+          else
+            echo "environment=dev" >> $GITHUB_ENV
+          fi
+
+      - name: Load Environment Variables
+        id: load_env
+        run: |
+          echo "Fetching environment variables for ${{ env.environment }}"
+          if [[ "${{ env.environment }}" == "prod" ]]; then
+            echo "PROJECT_ID=prod-project-id" >> $GITHUB_ENV
+            echo "POOL_NAME=prod-pool-name" >> $GITHUB_ENV
+            echo "PROVIDER_NAME=prod-provider-name" >> $GITHUB_ENV
+          elif [[ "${{ env.environment }}" == "test" ]]; then
+            echo "PROJECT_ID=test-project-id" >> $GITHUB_ENV
+            echo "POOL_NAME=test-pool-name" >> $GITHUB_ENV
+            echo "PROVIDER_NAME=test-provider-name" >> $GITHUB_ENV
+          else
+            echo "PROJECT_ID=dev-project-id" >> $GITHUB_ENV
+            echo "POOL_NAME=dev-pool-name" >> $GITHUB_ENV
+            echo "PROVIDER_NAME=dev-provider-name" >> $GITHUB_ENV
+          fi
+
       - name: Authenticate to GCP
         id: auth
         uses: google-github-actions/auth@v1
         with:
-          workload_identity_provider: "projects/179296069976/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider"
-          service_account: "github-actions-sa@blog-website-d.iam.gserviceaccount.com"
+          workload_identity_provider: "projects/${{ env.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/${{ env.POOL_NAME }}/providers/${{ env.PROVIDER_NAME }}"
+          service_account: "github-actions-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com"
+
+      - name: Deploy infrastructure
+        run: |
+          echo "Deploying to ${{ env.environment }} environment"
+          gcloud config set project ${{ env.PROJECT_ID }}
+          # Add your deployment commands here, e.g., Terraform or gcloud commands
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v1
