@@ -107,5 +107,4 @@ jobs:
         working-directory: ./terraform
         shell: sh
         run: |
-          gcloud auth login \
-          terraform apply plan.tfplan
+          terraform apply "plan.tfplan"
