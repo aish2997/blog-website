@@ -44,3 +44,34 @@ variable "bigquery_tables" {
   }))
   description = "Configuration for BigQuery tables"
 }
+
+variable "cdn_backends" {
+  description = "Map of CDN backends with their bucket configurations"
+  type = map(object({
+    bucket_name = string
+  }))
+  default = {
+    "frontend" = {
+      bucket_name = "frontend-static-bucket"
+    },
+    "blog_assets" = {
+      bucket_name = "blog-assets-bucket"
+    }
+  }
+}
+
+variable "oauth_clients" {
+  description = "Map of OAuth clients with their configuration details"
+  type = map(object({
+    support_email     = string
+    application_title = string
+    client_name       = string
+  }))
+  default = {
+    "admin_portal" = {
+      support_email     = "admin@example.com"
+      application_title = "Admin Portal"
+      client_name       = "admin-oauth-client"
+    }
+  }
+}

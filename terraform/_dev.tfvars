@@ -29,18 +29,25 @@ bigquery_tables = {
     partition   = "DAY"
   }
 }
-oauth_clients = {
-  "admin_portal" = {
-    support_email     = "admin@example.com"
-    application_title = "Admin Portal"
-    client_name       = "admin-oauth-client"
-  }
-}
+
 cdn_backends = {
   "frontend" = {
     bucket_name = "frontend-static-bucket"
   },
   "blog_assets" = {
     bucket_name = "blog-assets-bucket"
+  }
+}
+
+oauth_clients = {
+  "admin_portal" = {
+    support_email     = "admin@example.com"
+    application_title = "Admin Portal (Dev)"
+    client_name       = "admin-oauth-client-dev"
+  },
+  "user_dashboard" = {
+    support_email     = "support@example.com"
+    application_title = "User Dashboard"
+    client_name       = "user-dashboard-oauth-client-dev"
   }
 }
