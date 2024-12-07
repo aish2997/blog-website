@@ -1,5 +1,5 @@
-project_id = "my-gcp-project-dev"
-region     = "us-central1"
+project_id  = "my-gcp-project-dev"
+region      = "us-central1"
 environment = "dev"
 
 cloud_run_services = {

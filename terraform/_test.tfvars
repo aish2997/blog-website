@@ -1,3 +1,3 @@
-project_id = "my-gcp-project-test"
-region = "us-central1"
+project_id  = "my-gcp-project-test"
+region      = "us-central1"
 environment = "test"

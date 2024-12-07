@@ -14,7 +14,7 @@ variable "environment" {
 }
 
 variable "cloud_run_services" {
-  type        = map(object({
+  type = map(object({
     image       = string
     environment = string
   }))
@@ -22,7 +22,7 @@ variable "cloud_run_services" {
 }
 
 variable "storage_buckets" {
-  type        = map(object({
+  type = map(object({
     location = string
     class    = string
     age      = number
@@ -31,14 +31,14 @@ variable "storage_buckets" {
 }
 
 variable "bigquery_datasets" {
-  type        = map(object({
+  type = map(object({
     location = string
   }))
   description = "Configuration for BigQuery datasets"
 }
 
 variable "bigquery_tables" {
-  type        = map(object({
+  type = map(object({
     schema_file = string
     partition   = string
   }))
