@@ -16,7 +16,7 @@ jobs:
 
     - name: Set up Google Cloud credentials using WIF
       id: auth
-      uses: google-github-actions/auth@v0
+      uses: google-github-actions/auth@v1
       with:
         # Reference the GCP service account configured for Workload Identity Federation
         workload_identity_provider: projects/${{ secrets.GCP_PROJECT_ID }}/locations/global/workloadIdentityPools/${{ secrets.GCP_WIF_POOL }}/providers/${{ secrets.GCP_WIF_PROVIDER }}
@@ -30,7 +30,7 @@ jobs:
 
     - name: Change working directory to terraform/
       run: cd terraform
-      
+
     - name: Initialize Terraform
       run: terraform init
 
