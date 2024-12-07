@@ -1,3 +1,4 @@
+/*
 resource "google_cloud_run_service" "services" {
   for_each = var.cloud_run_services
 
@@ -21,3 +22,4 @@ resource "google_cloud_run_service" "services" {
     latest_revision = true
   }
 }
+*/

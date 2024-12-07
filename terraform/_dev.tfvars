@@ -2,13 +2,14 @@ project_id  = "blog-website-d"
 region      = "us-central1"
 environment = "dev"
 
+/*
 cloud_run_services = {
   "fastapi-backend" = {
     image_suffix = "fastapi-backend:latest"
     environment  = "dev"
   }
 }
-
+*/
 storage_buckets = {
   "blog-storage" = {
     location = "us-central1"

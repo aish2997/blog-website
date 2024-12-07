@@ -12,7 +12,7 @@ variable "environment" {
   type        = string
   description = "Deployment environment (dev/test/prod)"
 }
-
+/*
 variable "cloud_run_services" {
   type = map(object({
     image_suffix = string
@@ -20,7 +20,7 @@ variable "cloud_run_services" {
   }))
   description = "Configuration for Cloud Run services"
 }
-
+*/
 variable "storage_buckets" {
   type = map(object({
     location = string
