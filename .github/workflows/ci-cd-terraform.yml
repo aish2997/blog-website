@@ -45,9 +45,9 @@ jobs:
           else
             echo "environment=dev" >> $GITHUB_ENV
             echo "Fetching environment variables for ${{ env.environment }}"
-            echo "PROJECT_ID=${{ env.PROJECT_ID }}" >> $GITHUB_ENV
-            echo "POOL_NAME=${{ env.POOL_NAME }}" >> $GITHUB_ENV
-            echo "PROVIDER_NAME=${{ env.PROVIDER_NAME }}" >> $GITHUB_ENV
+            echo "PROJECT_ID=${{ secrets.PROJECT_ID }}" >> $GITHUB_ENV
+            echo "POOL_NAME=${{ secrets.POOL_NAME }}" >> $GITHUB_ENV
+            echo "PROVIDER_NAME=${{ secrets.PROVIDER_NAME }}" >> $GITHUB_ENV
             echo "TFVARS_FILE=terraform/_dev.tfvars" >> $GITHUB_ENV
           fi
 
