@@ -1,11 +1,11 @@
-project_id  = "my-gcp-project-dev"
+project_id  = "blog-website-d"
 region      = "us-central1"
 environment = "dev"
 
 cloud_run_services = {
   "fastapi-backend" = {
-    image       = "gcr.io/my-gcp-project-dev/fastapi-backend:latest"
-    environment = "dev"
+    image_suffix = "fastapi-backend:latest"
+    environment  = "dev"
   }
 }
 

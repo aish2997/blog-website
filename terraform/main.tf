@@ -4,5 +4,5 @@ provider "google" {
   scopes = [
     "https://www.googleapos.com/auth/cloud-platform",
     "https://www.googleapos.com/auth/userinfo.email"
-    ]
+  ]
 }

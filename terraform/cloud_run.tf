@@ -7,7 +7,7 @@ resource "google_cloud_run_service" "services" {
   template {
     spec {
       containers {
-        image = each.value.image
+        image = "gcr.io/${var.project_id}/${each.value.image_suffix}" # Dynamically construct the image
         env {
           name  = "ENVIRONMENT"
           value = each.value.environment

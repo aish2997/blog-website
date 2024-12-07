@@ -15,8 +15,8 @@ variable "environment" {
 
 variable "cloud_run_services" {
   type = map(object({
-    image       = string
-    environment = string
+    image_suffix = string
+    environment  = string
   }))
   description = "Configuration for Cloud Run services"
 }
