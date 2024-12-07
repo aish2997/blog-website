@@ -80,7 +80,7 @@ jobs:
       - name: Terraform Init
         run: |
           terraform init \
-          -backend-config="bucket=${{ vars.BUCKET_NAME }}"
+          -backend-config="bucket=${{ vars.BUCKET_NAME }}" \
           -backend-config="prefix=infrastructure/state"
 
       - name: Terraform Validate
