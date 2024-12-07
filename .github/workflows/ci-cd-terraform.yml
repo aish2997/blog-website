@@ -78,6 +78,8 @@ jobs:
           project_id: ${{ vars.PROJECT_ID }}
   
       - name: Terraform Init
+        working-directory: ./terraform
+        shell: sh
         run: |
           terraform init \
           -backend-config="bucket=${{ vars.BUCKET_NAME }}" \
