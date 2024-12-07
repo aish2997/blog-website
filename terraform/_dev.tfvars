@@ -21,9 +21,6 @@ storage_buckets = {
 bigquery_datasets = {
   "blog_data" = {
     location = "US"
-  },
-  "analytics_data" = {
-    location = "US"
   }
 }
 
