@@ -96,13 +96,9 @@ jobs:
         shell: sh
         run: |
           terraform fmt -check
-
-      - name: Set GOOGLE_APPLICATION_CREDENTIALS
-        run: echo "export GOOGLE_APPLICATION_CREDENTIALS=$(gcloud auth application-default print-access-token)" >> $GITHUB_ENV
-        
+      
       - name: Terraform Plan
         working-directory: ./terraform
-        shell: sh
         run: |
           terraform plan -var-file=${{ needs.extract-environment-name.outputs.tfvars }} -var 'project_id=${{ vars.PROJECT_ID }}' -out=plan.tfplan
 
