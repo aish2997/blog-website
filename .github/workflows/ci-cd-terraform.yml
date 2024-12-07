@@ -76,7 +76,10 @@ jobs:
         uses: google-github-actions/setup-gcloud@v1.1.0
         with:
           project_id: ${{ vars.PROJECT_ID }}
-  
+          
+      - name: Debug Authentication
+        run: gcloud auth list
+        
       - name: Terraform Init
         working-directory: ./terraform
         shell: sh
