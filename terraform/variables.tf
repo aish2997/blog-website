@@ -39,11 +39,13 @@ variable "bigquery_datasets" {
 
 variable "bigquery_tables" {
   type = map(object({
+    dataset     = string # Reference to the dataset name
     schema_file = string
     partition   = string
   }))
   description = "Configuration for BigQuery tables"
 }
+
 /*
 variable "cdn_backends" {
   description = "Map of CDN backends with their bucket configurations"

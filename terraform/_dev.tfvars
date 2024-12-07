@@ -28,7 +28,8 @@ bigquery_datasets = {
 
 bigquery_tables = {
   "blog_posts" = {
-    schema_file = "./schema/bigquery_schema.json"
+    dataset     = "blog_data" # Dataset key from `bigquery_datasets`
+    schema_file = "./schema/blog_schema.json"
     partition   = "DAY"
   }
 }
