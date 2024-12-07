@@ -76,16 +76,6 @@ jobs:
         uses: google-github-actions/setup-gcloud@v1.1.0
         with:
           project_id: ${{ vars.PROJECT_ID }}
-          
-      - name: Debug Authentication
-        run: gcloud auth list
-
-      - name: Configure gcloud
-        run: gcloud config set project ${{ vars.PROJECT_ID }}
-      
-      - name: Export Credentials for Terraform
-        run: |
-          export GOOGLE_APPLICATION_CREDENTIALS="${{ secrets.GCP_CREDENTIALS }}"
               
       - name: Terraform Init
         working-directory: ./terraform
