@@ -20,16 +20,20 @@ storage_buckets = {
 bigquery_datasets = {
   "blog_data" = {
     location = "US"
+  },
+  "analytics_data" = {
+    location = "US"
   }
 }
 
 bigquery_tables = {
   "blog_posts" = {
-    schema_file = "database/bigquery_schema.json"
+    schema_file = "./schema/bigquery_schema.json"
     partition   = "DAY"
   }
 }
 
+/*
 cdn_backends = {
   "frontend" = {
     bucket_name = "frontend-static-bucket"
@@ -38,7 +42,9 @@ cdn_backends = {
     bucket_name = "blog-assets-bucket"
   }
 }
+*/
 
+/*
 oauth_clients = {
   "admin_portal" = {
     support_email     = "admin@example.com"
@@ -51,3 +57,4 @@ oauth_clients = {
     client_name       = "user-dashboard-oauth-client-dev"
   }
 }
+*/

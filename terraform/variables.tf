@@ -44,7 +44,7 @@ variable "bigquery_tables" {
   }))
   description = "Configuration for BigQuery tables"
 }
-
+/*
 variable "cdn_backends" {
   description = "Map of CDN backends with their bucket configurations"
   type = map(object({
@@ -59,7 +59,8 @@ variable "cdn_backends" {
     }
   }
 }
-
+*/
+/*
 variable "oauth_clients" {
   description = "Map of OAuth clients with their configuration details"
   type = map(object({
@@ -75,3 +76,4 @@ variable "oauth_clients" {
     }
   }
 }
+*/

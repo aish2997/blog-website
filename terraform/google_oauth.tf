@@ -1,4 +1,5 @@
-resource "google_iap_brand" "oauth_clients" {
+/*
+esource "google_iap_brand" "oauth_clients" {
   for_each = var.oauth_clients
 
   support_email     = each.value.support_email
@@ -27,3 +28,4 @@ output "oauth_client_secrets" {
     }
   }
 }
+*/

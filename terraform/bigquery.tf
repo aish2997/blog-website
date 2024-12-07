@@ -1,9 +1,14 @@
 resource "google_bigquery_dataset" "datasets" {
   for_each = var.bigquery_datasets
 
-  dataset_id = "${each.key}_${var.environment}"
+  dataset_id = "${each.key}_${var.environment}" # Combines dataset name with environment
   location   = each.value.location
+
+  labels = {
+    environment = var.environment
+  }
 }
+
 
 resource "google_bigquery_table" "tables" {
   for_each = var.bigquery_tables
