@@ -71,7 +71,7 @@ jobs:
 
       - name: Terraform Init
         run: |
-          terraform init -backend-config="bucket=${{ env.PROJECT_ID }}-terraform-state" -backend-config="prefix=terraform/state" -backend-config="project=${{ env.PROJECT_ID }}" ./terraform/
+          terraform init -backend-config="bucket=${{ env.PROJECT_ID }}-terraform-state" -backend-config="prefix=${{ env.environment }}/terraform/state" -backend-config="project=${{ env.PROJECT_ID }}" ./terraform/
 
       - name: Terraform Validate
         run: |
