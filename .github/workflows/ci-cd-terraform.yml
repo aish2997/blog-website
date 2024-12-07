@@ -30,31 +30,25 @@ jobs:
         run: |
           if [[ "${{ github.ref_name }}" == "main" ]]; then
             echo "environment=prod" >> $GITHUB_ENV
+            echo "Fetching environment variables for ${{ env.environment }}"
+            echo "PROJECT_ID=${{ env.PROJECT_ID }}" >> $GITHUB_ENV
+            echo "POOL_NAME=${{ env.POOL_NAME }}" >> $GITHUB_ENV
+            echo "PROVIDER_NAME=${{ env.PROVIDER_NAME }}" >> $GITHUB_ENV
+            echo "TFVARS_FILE=terraform/_prod.tfvars" >> $GITHUB_ENV
           elif [[ "${{ github.ref_name }}" == "integration" ]]; then
             echo "environment=test" >> $GITHUB_ENV
+            echo "Fetching environment variables for ${{ env.environment }}"
+            echo "PROJECT_ID=${{ env.PROJECT_ID }}" >> $GITHUB_ENV
+            echo "POOL_NAME=${{ env.POOL_NAME }}" >> $GITHUB_ENV
+            echo "PROVIDER_NAME=${{ env.PROVIDER_NAME }}" >> $GITHUB_ENV
+            echo "TFVARS_FILE=terraform/_test.tfvars" >> $GITHUB_ENV
           else
             echo "environment=dev" >> $GITHUB_ENV
-          fi
-
-      - name: Load Environment Variables
-        id: load_env
-        run: |
-          echo "Fetching environment variables for ${{ env.environment }}"
-          if [[ "${{ env.environment }}" == "prod" ]]; then
-            echo "PROJECT_ID=prod-project-id" >> $GITHUB_ENV
-            echo "POOL_NAME=prod-pool-name" >> $GITHUB_ENV
-            echo "PROVIDER_NAME=prod-provider-name" >> $GITHUB_ENV
-            echo "TFVARS_FILE=terraform/prod.tfvars" >> $GITHUB_ENV
-          elif [[ "${{ env.environment }}" == "test" ]]; then
-            echo "PROJECT_ID=test-project-id" >> $GITHUB_ENV
-            echo "POOL_NAME=test-pool-name" >> $GITHUB_ENV
-            echo "PROVIDER_NAME=test-provider-name" >> $GITHUB_ENV
-            echo "TFVARS_FILE=terraform/test.tfvars" >> $GITHUB_ENV
-          else
-            echo "PROJECT_ID=dev-project-id" >> $GITHUB_ENV
-            echo "POOL_NAME=dev-pool-name" >> $GITHUB_ENV
-            echo "PROVIDER_NAME=dev-provider-name" >> $GITHUB_ENV
-            echo "TFVARS_FILE=terraform/dev.tfvars" >> $GITHUB_ENV
+            echo "Fetching environment variables for ${{ env.environment }}"
+            echo "PROJECT_ID=${{ env.PROJECT_ID }}" >> $GITHUB_ENV
+            echo "POOL_NAME=${{ env.POOL_NAME }}" >> $GITHUB_ENV
+            echo "PROVIDER_NAME=${{ env.PROVIDER_NAME }}" >> $GITHUB_ENV
+            echo "TFVARS_FILE=terraform/_dev.tfvars" >> $GITHUB_ENV
           fi
 
       - name: Authenticate to GCP
