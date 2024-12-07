@@ -84,17 +84,24 @@ jobs:
           -backend-config="prefix=infrastructure/state"
 
       - name: Terraform Validate
+        working-directory: ./terraform
+        shell: sh
         run: |
-          terraform validate -var-file=${{ env.TFVARS_FILE }} ./terraform/
+          terraform validate
 
       - name: Terraform Format Check
+        working-directory: ./terraform
+        shell: sh
         run: |
-          terraform fmt -check -var-file=${{ env.TFVARS_FILE }} ./terraform/
+          terraform fmt -check
 
       - name: Terraform Plan
+        working-directory: ./terraform
         run: |
-          terraform plan -var-file=${{ env.TFVARS_FILE }} -out=tfplan ./terraform/
+          terraform plan -var-file=${{ needs.extract-environment-name.outputs.tfvars }} -var 'project_id=${{ vars.PROJECT_ID }}' -out=plan.tfplan -destroy
 
       - name: Terraform Apply
+        working-directory: ./terraform
+        shell: sh
         run: |
-          terraform apply -var-file=${{ env.TFVARS_FILE }} -auto-approve ./terraform/
+          terraform apply plan.tfplan
