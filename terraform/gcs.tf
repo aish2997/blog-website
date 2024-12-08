@@ -8,12 +8,12 @@ resource "google_storage_bucket" "buckets" {
 }
 */
 resource "google_storage_bucket" "example_bucket" {
-  name          = "bukcet-blog-website-d-29011997"  # Bucket name must be globally unique
-  location      = "EU"                 # Replace with the desired location (e.g., US, EU, ASIA)
-  force_destroy = true                 # Allows bucket deletion even if it contains objects
+  name          = "bukcet-blog-website-d-29011997" # Bucket name must be globally unique
+  location      = "EU"                             # Replace with the desired location (e.g., US, EU, ASIA)
+  force_destroy = true                             # Allows bucket deletion even if it contains objects
 
   versioning {
-    enabled = true                     # Enable versioning for the bucket
+    enabled = true # Enable versioning for the bucket
   }
 
   lifecycle_rule {
@@ -21,12 +21,12 @@ resource "google_storage_bucket" "example_bucket" {
       type = "Delete"
     }
     condition {
-      age = 30                         # Delete objects older than 30 days
+      age = 30 # Delete objects older than 30 days
     }
   }
 
   labels = {
-    environment = "dev"                # Add labels to the bucket
+    environment = "dev" # Add labels to the bucket
     team        = "engineering"
   }
 }
