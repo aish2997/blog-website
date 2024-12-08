@@ -107,4 +107,4 @@ jobs:
         working-directory: ./terraform
         shell: sh
         run: |
-          terraform apply "plan.tfplan"
+          terraform apply -auto-approve -input=false
