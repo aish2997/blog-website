@@ -4,10 +4,4 @@ terraform {
     prefix  = "infrastructure/state"
     project = var.project_id
   }
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 6.12.0"
-    }
-  }
 }
