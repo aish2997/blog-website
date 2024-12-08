@@ -24,8 +24,6 @@ variable "cloud_run_services" {
 variable "storage_buckets" {
   type = map(object({
     location = string
-    class    = string
-    age      = number
   }))
   description = "Configuration for GCS buckets"
 }
