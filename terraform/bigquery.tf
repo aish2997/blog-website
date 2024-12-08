@@ -1,4 +1,3 @@
-/*
 resource "google_bigquery_dataset" "datasets" {
   for_each = var.bigquery_datasets
 
@@ -23,4 +22,3 @@ resource "google_bigquery_table" "tables" {
 
   depends_on = [google_bigquery_dataset.datasets] # Ensure dataset creation is complete
 }
-*/

@@ -21,7 +21,7 @@ variable "cloud_run_services" {
   description = "Configuration for Cloud Run services"
 }
 */
-/*
+
 variable "storage_buckets" {
   type = map(object({
     location = string
@@ -30,8 +30,7 @@ variable "storage_buckets" {
   }))
   description = "Configuration for GCS buckets"
 }
-*/
-/*
+
 variable "bigquery_datasets" {
   type = map(object({
     location = string
@@ -47,7 +46,7 @@ variable "bigquery_tables" {
   }))
   description = "Configuration for BigQuery tables"
 }
-*/
+
 /*
 variable "cdn_backends" {
   description = "Map of CDN backends with their bucket configurations"
