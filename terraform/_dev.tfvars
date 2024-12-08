@@ -1,4 +1,3 @@
-project_id  = "blog-website-d"
 region      = "europe-west1"
 environment = "dev"
 
