@@ -17,7 +17,7 @@ storage_buckets = {
     age      = 30
   }
 }
-/*
+
 bigquery_datasets = {
   "blog_data" = {
     location = "US"
@@ -31,7 +31,7 @@ bigquery_tables = {
     partition   = "DAY"
   }
 }
-*/
+
 /*
 cdn_backends = {
   "frontend" = {
