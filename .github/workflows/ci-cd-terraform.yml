@@ -113,4 +113,4 @@ jobs:
         shell: sh
         run: |
           export TF_LOG=DEBUG
-          terraform apply "plan.tfplan" -auto-approve
+          terraform apply "plan.tfplan"
