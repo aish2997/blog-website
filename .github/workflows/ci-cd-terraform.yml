@@ -79,7 +79,7 @@ jobs:
 
       - name: 'Use gcloud CLI'
         shell: sh
-        run: 'gcloud auth application-default login'
+        run: 'gcloud auth application-default login --quiet'
 
       - name: 'Use gcloud CLI'
         shell: sh
