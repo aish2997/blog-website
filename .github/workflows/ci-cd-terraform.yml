@@ -77,6 +77,14 @@ jobs:
         with:
           project_id: ${{ vars.PROJECT_ID }}
 
+      - name: 'Use gcloud CLI'
+        shell: sh
+        run: 'gcloud auth application-default login'
+
+      - name: 'Use gcloud CLI'
+        shell: sh
+        run: 'gcloud auth application-default set-quota-project blog-website-d'
+
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
