@@ -112,4 +112,5 @@ jobs:
         working-directory: ./terraform
         shell: sh
         run: |
-          terraform apply "plan.tfplan"
+          export TF_LOG=DEBUG
+          terraform apply "plan.tfplan" -auto-approve

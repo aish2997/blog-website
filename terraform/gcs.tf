@@ -7,26 +7,9 @@ resource "google_storage_bucket" "buckets" {
   storage_class = each.value.class
 }
 */
+
 resource "google_storage_bucket" "example_bucket" {
-  name          = "bukcet-blog-website-d-29011997" # Bucket name must be globally unique
-  location      = "EU"                             # Replace with the desired location (e.g., US, EU, ASIA)
-  force_destroy = true                             # Allows bucket deletion even if it contains objects
-
-  versioning {
-    enabled = true # Enable versioning for the bucket
-  }
-
-  lifecycle_rule {
-    action {
-      type = "Delete"
-    }
-    condition {
-      age = 30 # Delete objects older than 30 days
-    }
-  }
-
-  labels = {
-    environment = "dev" # Add labels to the bucket
-    team        = "engineering"
-  }
+  name     = "your-unique-bucket-name-29292992" # Follow naming rules
+  location = "EU"                     # Ensure location is valid
+  project  = "blog-website-d"    # Correct project ID
 }
