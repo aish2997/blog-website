@@ -79,7 +79,7 @@ jobs:
 
       - name: Set Terraform Environment Variables
         run: |
-          echo "TF_VAR_project_id=${{ secrets.GCP_PROJECT_ID }}" >> $GITHUB_ENV
+          echo "TF_VAR_project_id=${{ vars.PROJECT_ID }}" >> $GITHUB_ENV
                  
       - name: Terraform Init
         working-directory: ./terraform
