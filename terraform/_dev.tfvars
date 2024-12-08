@@ -13,6 +13,8 @@ cloud_run_services = {
 storage_buckets = {
   "blog-storage" = {
     location = "europe-west1"
+    class    = "STANDARD"
+    age      = 30
   }
 }
 /*
