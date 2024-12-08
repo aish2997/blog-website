@@ -67,7 +67,7 @@ jobs:
 
       - name: Authenticate to GCP
         id: auth
-        uses: google-github-actions/auth@v1
+        uses: google-github-actions/auth@v2.0.0
         with:
           workload_identity_provider: "projects/${{ vars.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/${{ vars.POOL_NAME }}/providers/${{ vars.PROVIDER_NAME }}"
           service_account: "github-actions-sa@${{ vars.PROJECT_ID }}.iam.gserviceaccount.com"
