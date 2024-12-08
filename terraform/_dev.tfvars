@@ -10,6 +10,7 @@ cloud_run_services = {
   }
 }
 */
+/*
 storage_buckets = {
   "blog-storage" = {
     location = "europe-west1"
@@ -17,7 +18,8 @@ storage_buckets = {
     age      = 30
   }
 }
-
+*/
+/*
 bigquery_datasets = {
   "blog_data" = {
     location = "EU"
@@ -31,7 +33,7 @@ bigquery_tables = {
     partition   = "DAY"
   }
 }
-
+*/
 /*
 cdn_backends = {
   "frontend" = {
