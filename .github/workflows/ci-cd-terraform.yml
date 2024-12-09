@@ -112,3 +112,27 @@ jobs:
         shell: sh
         run: |
           terraform apply "plan.tfplan"
+
+          - name: Set up Node.js
+          uses: actions/setup-node@v3
+          with:
+            node-version: 18
+            cache: 'pnpm'
+    
+      - name: Install pnpm
+        shell: sh
+        run: npm install -g pnpm
+    
+      - name: Install Dependencies
+        shell: sh
+        run: pnpm install
+        working-directory: frontend
+    
+      - name: Build Project
+        run: pnpm run build
+        working-directory: frontend
+
+      - name: Deploy to GCS
+        run: |
+          gsutil -m rsync -r frontend/dist gs://blob-storage
+    
