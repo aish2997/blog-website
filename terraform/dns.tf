@@ -1,11 +1,11 @@
 resource "google_dns_managed_zone" "my_zone" {
   name       = "europe-west1"
-  dns_name   = "aishwaryabhargava.com" # Replace with your domain
+  dns_name   = "aishwaryabhargava.com." # Replace with your domain
   visibility = "public"
 }
 
 resource "google_dns_record_set" "cname_record" {
-  name         = "www.aishwaryabhargava.com" # Replace with your actual domain
+  name         = "www.aishwaryabhargava.com." # Replace with your actual domain
   managed_zone = google_dns_managed_zone.my_zone.name
   type         = "CNAME"
   ttl          = 300
@@ -14,7 +14,7 @@ resource "google_dns_record_set" "cname_record" {
 }
 
 resource "google_dns_record_set" "a_record" {
-  name         = "aishwaryabhargava.com" # Replace with your actual domain
+  name         = "aishwaryabhargava.com." # Replace with your actual domain
   managed_zone = google_dns_managed_zone.my_zone.name
   type         = "A"
   ttl          = 300
