@@ -134,5 +134,5 @@ jobs:
 
       - name: Deploy to GCS
         run: |
-          gsutil -m rsync -r frontend/dist gs://blob-storage
+          gsutil -m rsync -r frontend/dist gs://${{ vars.WEB_BUCKET_NAME }}
     
