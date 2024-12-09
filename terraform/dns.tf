@@ -1,7 +1,7 @@
 resource "google_dns_managed_zone" "my_zone" {
   name     = "europe-west1"
   dns_name = "aishwaryabhargava.com."  # Replace with your domain
-  visibility = "PUBLIC"
+  visibility = "public"
 }
 
 resource "google_dns_record_set" "cname_record" {
