@@ -9,16 +9,9 @@ resource "google_storage_bucket" "blog_bucket" {
     main_page_suffix = "index.html"
     not_found_page   = "404.html"
   }
-  
+
   lifecycle {
     prevent_destroy = false # Allows the bucket to be destroyed if needed
-  }
-
-  cors {
-    origins          = ["*"]
-    methods          = ["GET", "HEAD"]
-    response_headers = ["Content-Type"]
-    max_age_seconds  = 3600
   }
 }
 
