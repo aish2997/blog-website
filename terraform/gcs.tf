@@ -1,7 +1,7 @@
 resource "google_storage_bucket" "blog_bucket" {
   for_each = var.storage_buckets
 
-  name          = "www.aishwaryabhargava.com"
+  name          = "my-bucket-aishwaryabhargava"
   location      = each.value.location
   storage_class = each.value.class
 
