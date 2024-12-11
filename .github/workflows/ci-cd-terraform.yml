@@ -131,7 +131,11 @@ jobs:
         run: pnpm run build
         working-directory: frontend
 
+      - name: Get Public Buckets
+        id: public_buckets
+        run: echo "::set-output name=public_buckets::$(terraform output -json public_buckets | jq -r '.[]')"
+
       - name: Deploy to GCS
         run: |
-          gsutil -m rsync -r frontend/dist gs://${{ vars.WEB_BUCKET_NAME }}
+          gsutil -m rsync -r frontend/dist gs://${{ steps.public_buckets.outputs.public_buckets }}
     
