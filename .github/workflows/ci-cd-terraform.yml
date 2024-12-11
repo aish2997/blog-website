@@ -131,6 +131,10 @@ jobs:
         run: pnpm run build
         working-directory: frontend
 
+      - name: Terraform Output
+        shell: sh
+        run: terraform output
+
       - name: Get Public Buckets
         shell: sh
         run: echo "PUBLIC_BUCKETS=$(terraform output -json public_buckets | jq -r '.[]')" >> $GITHUB_ENV
