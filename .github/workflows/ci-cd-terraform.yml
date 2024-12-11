@@ -132,6 +132,7 @@ jobs:
         working-directory: frontend
 
       - name: Get Public Buckets
+        shell: sh
         id: public_buckets
         run: echo "::set-output name=public_buckets::$(terraform output -json public_buckets | jq -r '.[]')"
 
