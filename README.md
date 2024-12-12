@@ -114,7 +114,6 @@ This will list all the roles assigned to the service account.
 
 Here are the `gcloud` commands to create a GCS bucket with the specified directory structure:
 
-### Step 1: Create the GCS Bucket
 ```bash
 gcloud storage buckets create gs://YOUR_PROJECT_ID-state \
   --project="YOUR_PROJECT_ID" \
@@ -123,12 +122,14 @@ gcloud storage buckets create gs://YOUR_PROJECT_ID-state \
   --uniform-bucket-level-access
 ```
 
-1. Add instructions to set up WIF using Gcloud Commands
-2. Add instaructions to create state bucket in GCS using Gcloud Commands.
-3. Add instructions to add github actions service account as well.
-4. IAM Service Account Credentials API Enable this API
+## 4. Enable these APIs in Google Cloud Platform
 
-To access the webapp use the below URL.
+It's important to note that enabling these APIs can incurr cost.
+
+1. IAM Service Account Credentials API
+2. Cloud DNS API
+
+## 5. To access the webapp use the below URL.
  
  ```
  http://[YOUR_BUCKET_NAME].storage.googleapis.com
