@@ -137,6 +137,7 @@ jobs:
         run: terraform output
 
       - name: Get Public Buckets
+        working-directory: ./terraform
         shell: sh
         run: echo "PUBLIC_BUCKETS=$(terraform output -json public_buckets | jq -r '.[]')" >> $GITHUB_ENV
       
