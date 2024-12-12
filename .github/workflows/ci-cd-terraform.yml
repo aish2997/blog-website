@@ -132,6 +132,7 @@ jobs:
         working-directory: frontend
 
       - name: Terraform Output
+        working-directory: ./terraform
         shell: sh
         run: terraform output
 
