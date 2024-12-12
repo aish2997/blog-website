@@ -14,6 +14,8 @@ gcloud iam workload-identity-pools create github-actions-pool \
   --display-name="GitHub Actions Pool"
 ```
 
+<pre> ```bash gcloud iam workload-identity-pools create github-actions-pool \ --project="<YOUR_PROJECT_ID>" \ --location="global" \ --display-name="GitHub Actions Pool" ``` </pre>
+
 ### Step 2: Create the Workload Identity Pool Provider
 ```bash
 gcloud iam workload-identity-pools providers create-oidc github-actions-provider \
@@ -110,7 +112,7 @@ gcloud projects get-iam-policy YOUR_PROJECT_NAME \
 
 This will list all the roles assigned to the service account.
 
-## 3. Setting up the state file bucket in GCS
+## 3. Setting up the terraform state file bucket in GCS
 
 Here are the `gcloud` commands to create a GCS bucket with the specified directory structure:
 
