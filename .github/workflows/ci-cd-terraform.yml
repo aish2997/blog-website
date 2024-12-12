@@ -1,5 +1,4 @@
-name: Terraform CI/CD
-
+name: Create and/or Update Infrastructure
 on:
   # push:
   #   branches:
@@ -112,3 +111,31 @@ jobs:
         shell: sh
         run: |
           terraform apply "plan.tfplan"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+    
+      - name: Install pnpm
+        shell: sh
+        run: npm install -g pnpm
+    
+      - name: Install Dependencies
+        shell: sh
+        run: pnpm install
+        working-directory: frontend
+    
+      - name: Build Project
+        run: pnpm run build
+        working-directory: frontend
+
+      - name: Get Public Buckets
+        working-directory: ./terraform
+        shell: sh
+        run: echo "PUBLIC_BUCKETS=$(terraform output -json public_buckets | jq -r '.[]')" >> $GITHUB_ENV
+      
+      - name: Deploy to GCS
+        run: |
+          gsutil -m rsync -r frontend/dist gs://${{ env.PUBLIC_BUCKETS }}
+    

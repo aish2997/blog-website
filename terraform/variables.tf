@@ -24,11 +24,12 @@ variable "cloud_run_services" {
 
 variable "storage_buckets" {
   type = map(object({
-    location = string
-    class    = string
-    age      = number
+    location      = string
+    class         = string
+    age           = number
+    public_access = bool
   }))
-  description = "Configuration for GCS buckets"
+  description = "Configuration for GCS buckets, including public access option"
 }
 
 variable "bigquery_datasets" {
