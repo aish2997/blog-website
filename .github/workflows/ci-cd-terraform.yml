@@ -1,5 +1,4 @@
-name: Terraform CI/CD
-
+name: Create and/or Update Infrastructure
 on:
   # push:
   #   branches:
