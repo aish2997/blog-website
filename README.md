@@ -2,7 +2,64 @@
 
 A blog platform built with Next.js (Frontend), FastAPI (Backend), and GCP (Infrastructure).
 
-## 1. Setting up the Github Actions Service Account in Cloud Console
+## 1. Setting up Workload Indetity Pool and Provider
+
+Here is the `gcloud` command to create and configure a Workload Identity Pool and a provider with the specified settings:
+
+### Step 1: Create the Workload Identity Pool
+```bash
+gcloud iam workload-identity-pools create github-actions-pool \
+  --project="YOUR_PROJECT_ID" \
+  --location="global" \
+  --display-name="GitHub Actions Pool"
+```
+
+### Step 2: Create the Workload Identity Pool Provider
+```bash
+gcloud iam workload-identity-pools providers create-oidc github-actions-provider \
+  --workload-identity-pool="github-actions-pool" \
+  --project="YOUR_PROJECT_ID" \
+  --location="global" \
+  --display-name="GitHub Actions Provider" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-mapping="attribute.aud=assertion.aud,attribute.actor=assertion.actor,attribute.repository=assertion.repository,google.subject=assertion.sub" \
+  --attribute-condition="attribute.repository=='aish2997/blog-website'"
+```
+
+### Explanation of Commands
+1. **Create the Workload Identity Pool:**
+   - `github-actions-pool` is the name of the pool.
+   - Replace `YOUR_PROJECT_ID` with your actual GCP project ID.
+
+2. **Create the OIDC Provider:**
+   - `github-actions-provider` is the name of the provider.
+   - The `issuer-uri` is set to `https://token.actions.githubusercontent.com` for GitHub Actions.
+   - `--attribute-mapping` defines the mapping of OIDC attributes to Google attributes:
+     - `attribute.aud = assertion.aud`
+     - `attribute.actor = assertion.actor`
+     - `attribute.repository = assertion.repository`
+     - `google.subject = assertion.sub`
+   - `--attribute-condition` restricts authentication to GitHub repositories matching the condition `attribute.repository=='aish2997/blog-website'`.
+
+3. **Default Audience:**
+   - By default, the audience (`aud`) of the OIDC token must match the full canonical resource name of the Workload Identity Pool Provider unless explicitly specified otherwise. You do not need to set an additional audience in this configuration.
+
+### Verification
+After completing these steps, verify the configuration:
+```bash
+gcloud iam workload-identity-pools describe github-actions-pool \
+  --project="YOUR_PROJECT_ID" \
+  --location="global"
+
+gcloud iam workload-identity-pools providers describe github-actions-provider \
+  --workload-identity-pool="github-actions-pool" \
+  --project="YOUR_PROJECT_ID" \
+  --location="global"
+```
+
+These commands will output the details of the pool and provider to confirm everything is set up correctly.
+
+## 2. Setting up the Github Actions Service Account
 
 You can create the service account and assign the specified roles using the `gcloud` CLI. Here's how to do it step-by-step:
 
