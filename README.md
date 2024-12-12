@@ -14,8 +14,6 @@ gcloud iam workload-identity-pools create github-actions-pool \
   --display-name="GitHub Actions Pool"
 ```
 
-<pre> gcloud iam workload-identity-pools create github-actions-pool \ --project="<YOUR_PROJECT_ID>" \ --location="global" \ --display-name="GitHub Actions Pool" </pre>
-
 ### Step 2: Create the Workload Identity Pool Provider
 ```bash
 gcloud iam workload-identity-pools providers create-oidc github-actions-provider \
