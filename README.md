@@ -110,9 +110,43 @@ gcloud projects get-iam-policy YOUR_PROJECT_NAME \
 
 This will list all the roles assigned to the service account.
 
+## 3. Setting up the state file bucket in GCS
+
+Here are the `gcloud` commands to create a GCS bucket with the specified directory structure:
+
+### Step 1: Create the GCS Bucket
+```bash
+gcloud storage buckets create blog-website-d-state \
+  --project="YOUR_PROJECT_ID" \
+  --location="us" \
+  --storage-class="STANDARD" \
+  --uniform-bucket-level-access
+```
+
+### Step 2: Create the Directory Structure
+GCS doesn't have a traditional file system, but you can create placeholder objects to simulate a directory structure. In this case, you can create an empty placeholder object:
+
+```bash
+echo "Placeholder for directory structure" | gsutil cp - \
+  gs://blog-website-d-state/infrastructure/state/
+```
+
+This will create a path `infrastructure/state/` in the bucket with a placeholder object.
+
+### Verify the Structure
+You can verify the structure using the `gsutil ls` command:
+```bash
+gsutil ls -r gs://blog-website-d-state/
+```
+
+### Notes
+- Replace `YOUR_PROJECT_ID` with your GCP project ID.
+- The placeholder object ensures the directory structure is visible, as GCS is a flat storage system and "directories" are created implicitly through object paths.
+
 1. Add instructions to set up WIF using Gcloud Commands
 2. Add instaructions to create state bucket in GCS using Gcloud Commands.
 3. Add instructions to add github actions service account as well.
+4. IAM Service Account Credentials API Enable this API
 
 To access the webapp use the below URL.
  
