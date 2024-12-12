@@ -2,9 +2,7 @@
 
 A blog platform built with Next.js (Frontend), FastAPI (Backend), and GCP (Infrastructure).
 
-## Development Setup
-
-### 1. Setting up the Github Actions Service Account in Cloud Console
+## 1. Setting up the Github Actions Service Account in Cloud Console
 
 You can create the service account and assign the specified roles using the `gcloud` CLI. Here's how to do it step-by-step:
 
