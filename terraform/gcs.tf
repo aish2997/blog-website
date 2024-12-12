@@ -1,7 +1,8 @@
 resource "google_storage_bucket" "blog_bucket" {
   for_each = var.storage_buckets
 
-  name          = "my-bucket-${each.key}"
+  #name          = "my-bucket-${each.key}"
+  name          = "${each.key}-${var.environment}"
   location      = each.value.location
   storage_class = each.value.class
 
