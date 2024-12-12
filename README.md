@@ -1,24 +1,30 @@
 # Blog Website
 
-A blog platform built with Next.js (Frontend), FastAPI (Backend), and GCP (Infrastructure).
+A blog platform built with **Next.js** (Frontend), **FastAPI** (Backend), and **GCP** (Infrastructure).
 
-## 1. Setting up Workload Indetity Pool and Provider
+---
 
-Here is the `gcloud` command to create and configure a Workload Identity Pool and a provider with the specified settings:
+## 1. Setting Up Workload Identity Pool and Provider
 
-### Step 1: Create the Workload Identity Pool
+Below are the `gcloud` commands to create and configure a Workload Identity Pool and Provider with the specified settings.
+
+### Step 1: Export Project ID and Create the Workload Identity Pool
+
 ```bash
+export PROJECT_ID="YOUR_PROJECT_ID"
+
 gcloud iam workload-identity-pools create github-actions-pool \
-  --project="YOUR_PROJECT_ID" \
+  --project="$PROJECT_ID" \
   --location="global" \
   --display-name="GitHub Actions Pool"
 ```
 
 ### Step 2: Create the Workload Identity Pool Provider
+
 ```bash
 gcloud iam workload-identity-pools providers create-oidc github-actions-provider \
   --workload-identity-pool="github-actions-pool" \
-  --project="YOUR_PROJECT_ID" \
+  --project="$PROJECT_ID" \
   --location="global" \
   --display-name="GitHub Actions Provider" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
@@ -27,11 +33,12 @@ gcloud iam workload-identity-pools providers create-oidc github-actions-provider
 ```
 
 ### Explanation of Commands
-1. **Create the Workload Identity Pool:**
+
+1. **Create the Workload Identity Pool**:
    - `github-actions-pool` is the name of the pool.
    - Replace `YOUR_PROJECT_ID` with your actual GCP project ID.
 
-2. **Create the OIDC Provider:**
+2. **Create the OIDC Provider**:
    - `github-actions-provider` is the name of the provider.
    - The `issuer-uri` is set to `https://token.actions.githubusercontent.com` for GitHub Actions.
    - `--attribute-mapping` defines the mapping of OIDC attributes to Google attributes:
@@ -39,98 +46,116 @@ gcloud iam workload-identity-pools providers create-oidc github-actions-provider
      - `attribute.actor = assertion.actor`
      - `attribute.repository = assertion.repository`
      - `google.subject = assertion.sub`
-   - `--attribute-condition` restricts authentication to GitHub repositories matching the condition `attribute.repository=='aish2997/blog-website'`.
-
-3. **Default Audience:**
-   - By default, the audience (`aud`) of the OIDC token must match the full canonical resource name of the Workload Identity Pool Provider unless explicitly specified otherwise. You do not need to set an additional audience in this configuration.
+   - `--attribute-condition` restricts authentication to the repository `aish2997/blog-website`.
 
 ### Verification
+
 After completing these steps, verify the configuration:
+
 ```bash
 gcloud iam workload-identity-pools describe github-actions-pool \
-  --project="YOUR_PROJECT_ID" \
+  --project="$PROJECT_ID" \
   --location="global"
 
 gcloud iam workload-identity-pools providers describe github-actions-provider \
   --workload-identity-pool="github-actions-pool" \
-  --project="YOUR_PROJECT_ID" \
+  --project="$PROJECT_ID" \
   --location="global"
 ```
 
-These commands will output the details of the pool and provider to confirm everything is set up correctly.
+---
 
-## 2. Setting up the Github Actions Service Account
+## 2. Setting Up the GitHub Actions Service Account
 
-You can create the service account and assign the specified roles using the `gcloud` CLI. Here's how to do it step-by-step:
+Follow these steps to create the service account and assign the specified roles.
 
-### Step 1: Create the Service Account
+### Step 1: Export Project Name and Create the Service Account
+
 ```bash
+export PROJECT_NAME="YOUR_PROJECT_NAME"
+
 gcloud iam service-accounts create github-actions-sa \
   --description="GitHub Actions Service Account" \
   --display-name="GitHub Actions SA" \
-  --project=YOUR_PROJECT_NAME
+  --project="$PROJECT_NAME"
 ```
 
 ### Step 2: Assign Roles to the Service Account
+
 ```bash
+export SA_EMAIL="github-actions-sa@$PROJECT_NAME.iam.gserviceaccount.com"
+export PROJECT_NUMBER=$(gcloud projects describe $PROJECT_NAME --format="value(projectNumber)")
+export POOL_NAME="github-actions-pool"
+export GITHUB_REPO="aish2997/blog-website"
+
 # DNS Administrator
-gcloud projects add-iam-policy-binding YOUR_PROJECT_NAME \
-  --member="serviceAccount:github-actions-sa@YOUR_PROJECT_NAME.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding "$PROJECT_NAME" \
+  --member="serviceAccount:$SA_EMAIL" \
   --role="roles/dns.admin"
 
 # Service Account Token Creator
-gcloud projects add-iam-policy-binding YOUR_PROJECT_NAME \
-  --member="serviceAccount:github-actions-sa@YOUR_PROJECT_NAME.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding "$PROJECT_NAME" \
+  --member="serviceAccount:$SA_EMAIL" \
   --role="roles/iam.serviceAccountTokenCreator"
 
 # Storage Admin
-gcloud projects add-iam-policy-binding YOUR_PROJECT_NAME \
-  --member="serviceAccount:github-actions-sa@YOUR_PROJECT_NAME.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding "$PROJECT_NAME" \
+  --member="serviceAccount:$SA_EMAIL" \
   --role="roles/storage.admin"
 
 # Workload Identity User
-gcloud iam service-accounts add-iam-policy-binding github-actions-sa@YOUR_PROJECT_NAME.iam.gserviceaccount.com \
-  --member="principalSet://iam.googleapis.com/projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/YOUR_POOL_NAME/attribute.repository/YOUR_GITHUB_REPO" \
+gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" \
+  --member="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$POOL_NAME/attribute.repository/$GITHUB_REPO" \
   --role="roles/iam.workloadIdentityUser"
 ```
 
-### Replace Placeholders
-- Replace `YOUR_PROJECT_NUMBER` with your GCP project number (find it using `gcloud projects list`).
-- Replace `YOUR_POOL_NAME` with your workload identity pool name.
-- Replace `YOUR_GITHUB_REPO` with the GitHub repository in the format `owner/repo` (e.g., `username/repository`).
-
 ### Verify the Configuration
-After assigning the roles, verify that the service account has the required permissions:
+
+After assigning the roles, verify the service account permissions:
+
 ```bash
-gcloud projects get-iam-policy YOUR_PROJECT_NAME \
+gcloud projects get-iam-policy "$PROJECT_NAME" \
   --flatten="bindings[].members" \
-  --filter="bindings.members:github-actions-sa@YOUR_PROJECT_NAME.iam.gserviceaccount.com" \
+  --filter="bindings.members:$SA_EMAIL" \
   --format="table(bindings.role)"
 ```
 
-This will list all the roles assigned to the service account.
+---
 
-## 3. Setting up the state file bucket in GCS
+## 3. Setting Up the Terraform State File Bucket in GCS
 
-Here are the `gcloud` commands to create a GCS bucket with the specified directory structure:
+Create a GCS bucket to store the Terraform state files:
 
 ```bash
-gcloud storage buckets create gs://YOUR_PROJECT_ID-state \
-  --project="YOUR_PROJECT_ID" \
+export STATE_BUCKET="$PROJECT_NAME-state"
+
+gcloud storage buckets create "gs://$STATE_BUCKET" \
+  --project="$PROJECT_NAME" \
   --location="eu" \
   --default-storage-class="STANDARD" \
   --uniform-bucket-level-access
 ```
 
-## 4. Enable these APIs in Google Cloud Platform
+---
 
-It's important to note that enabling these APIs can incurr cost.
+## 4. Enable Required APIs in GCP
 
-1. IAM Service Account Credentials API
-2. Cloud DNS API
+Use the following commands to enable the required APIs:
 
-## 5. To access the webapp use the below URL.
- 
- ```
- http://[YOUR_BUCKET_NAME].storage.googleapis.com
- ```
+```bash
+gcloud services enable iamcredentials.googleapis.com \
+  --project="$PROJECT_NAME"
+
+gcloud services enable dns.googleapis.com \
+  --project="$PROJECT_NAME"
+```
+
+---
+
+## 5. Access the Web App
+
+After deployment, access the web app using this URL:
+
+```
+http://[YOUR_BUCKET_NAME].storage.googleapis.com
+```
