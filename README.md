@@ -1,7 +1,3 @@
-Here's the improved version of your README:
-
----
-
 # Blog Website
 
 A blog platform built with **Next.js** (Frontend), **FastAPI** (Backend), and **GCP** (Infrastructure).
