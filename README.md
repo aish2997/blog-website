@@ -152,7 +152,50 @@ gcloud services enable dns.googleapis.com \
 
 ---
 
-## 5. Access the Web App
+## 5. Setting Up GitHub Environment Variables
+
+Use the following GitHub CLI (`gh`) commands to set up environment variables for the `dev`, `test`, and `prod` environments.
+
+### Step 1: Export Repository Name
+
+Replace `YOUR_REPOSITORY` with your repository name in the format `owner/repository` (e.g., `aish2997/blog-website`).
+
+```bash
+export REPO_NAME="YOUR_REPOSITORY"
+```
+
+### Step 2: Set Environment Variables for `dev` Environment
+
+```bash
+gh secret set BUCKET_NAME --body "" --repo "$REPO_NAME" --env "dev"
+gh secret set POOL_NAME --body "" --repo "$REPO_NAME" --env "dev"
+gh secret set PROJECT_ID --body "" --repo "$REPO_NAME" --env "dev"
+gh secret set PROJECT_NUMBER --body "" --repo "$REPO_NAME" --env "dev"
+gh secret set PROVIDER_NAME --body "" --repo "$REPO_NAME" --env "dev"
+```
+
+### Step 3: Set Environment Variables for `test` Environment
+
+```bash
+gh secret set BUCKET_NAME --body "" --repo "$REPO_NAME" --env "test"
+gh secret set POOL_NAME --body "" --repo "$REPO_NAME" --env "test"
+gh secret set PROJECT_ID --body "" --repo "$REPO_NAME" --env "test"
+gh secret set PROJECT_NUMBER --body "" --repo "$REPO_NAME" --env "test"
+gh secret set PROVIDER_NAME --body "" --repo "$REPO_NAME" --env "test"
+```
+
+### Step 4: Set Environment Variables for `prod` Environment
+
+```bash
+gh secret set BUCKET_NAME --body "" --repo "$REPO_NAME" --env "prod"
+gh secret set POOL_NAME --body "" --repo "$REPO_NAME" --env "prod"
+gh secret set PROJECT_ID --body "" --repo "$REPO_NAME" --env "prod"
+gh secret set PROJECT_NUMBER --body "" --repo "$REPO_NAME" --env "prod"
+gh secret set PROVIDER_NAME --body "" --repo "$REPO_NAME" --env "prod"
+```
+
+---
+## 6. Access the Web App
 
 After deployment, access the web app using this URL:
 
