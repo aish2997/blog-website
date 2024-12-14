@@ -14,6 +14,9 @@ resource "google_storage_bucket" "blog_bucket" {
   lifecycle {
     prevent_destroy = false # Allows the bucket to be destroyed if needed
   }
+
+  # Explicit dependency on the TXT record for domain verification
+  depends_on = [google_dns_record_set.txt_record]
 }
 
 resource "google_storage_bucket_iam_member" "all_users_viewer" {
