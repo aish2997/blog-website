@@ -2,7 +2,7 @@ resource "google_storage_bucket" "blog_bucket" {
   for_each = var.storage_buckets
 
   #name          = "${each.key}-${var.environment}"
-  name          = each.key == "blog-storage" && var.environment == "prod" ? "aishwaryabhargava.com" : "${each.key}-${var.environment}"
+  name          = each.key == "blog-storage" && var.environment == "prod" ? "www.aishwaryabhargava.com" : "${each.key}-${var.environment}"
   location      = each.value.location
   storage_class = each.value.class
 
