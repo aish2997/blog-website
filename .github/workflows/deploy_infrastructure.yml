@@ -32,7 +32,7 @@ jobs:
             echo "ENV_NAME=prod" >> $GITHUB_ENV
             echo "TFVARS_FILE=_prod.tfvars" >> $GITHUB_ENV
             echo "env=prod"
-          elif if [[ "${TF_ALWAYS_TEST}" == true ]] || [[ "${GITHUB_REF_NAME}" == "integration" ]]
+          elif [[ "${GITHUB_REF_NAME}" == "integration" ]]
           then
             echo "ENV_NAME=test" >> $GITHUB_ENV
             echo "TFVARS_FILE=_test.tfvars" >> $GITHUB_ENV
