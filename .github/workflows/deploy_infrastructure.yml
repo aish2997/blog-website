@@ -21,7 +21,7 @@ jobs:
       ENV_NAME: ""
       TFVARS_FILE: ""
       TF_ALWAYS_TEST: false
-      TF_ALWAYS_PROD: true
+      TF_ALWAYS_PROD: false
     runs-on: ubuntu-latest
     steps:
       # Set environment and read secret values.
