@@ -5,24 +5,26 @@ resource "google_dns_managed_zone" "my_zone" {
   visibility = "public"
 }
 
-resource "google_dns_record_set" "cname_record" {
+# CNAME Record for www subdomain
+resource "google_dns_record_set" "www_cname_record" {
   count        = var.environment == "prod" ? 1 : 0
-  name         = "www.aishwaryabhargava.com." # Replace with your actual domain
+  name         = "www.aishwaryabhargava.com."
   managed_zone = google_dns_managed_zone.my_zone[0].name
   type         = "CNAME"
   ttl          = 300
 
-  rrdatas = ["c.storage.googleapis.com."] # GCS bucket URL for static website hosting
+  rrdatas = ["c.storage.googleapis.com."]
 }
 
-resource "google_dns_record_set" "a_record" {
+# CNAME Record for root domain (redirect to www)
+resource "google_dns_record_set" "root_cname_record" {
   count        = var.environment == "prod" ? 1 : 0
-  name         = "aishwaryabhargava.com." # Replace with your actual domain
+  name         = "aishwaryabhargava.com."
   managed_zone = google_dns_managed_zone.my_zone[0].name
-  type         = "A"
+  type         = "CNAME"
   ttl          = 300
 
-  rrdatas = ["216.239.32.21", "216.239.34.21", "216.239.36.21", "216.239.38.21"] # These are GCS IP addresses for static website hosting
+  rrdatas = ["www.aishwaryabhargava.com."]
 }
 
 resource "google_dns_record_set" "txt_record" {
