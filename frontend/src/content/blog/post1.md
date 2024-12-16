@@ -2,7 +2,7 @@
 title: "Choosing the Right Path: Sequential, Asyncio, Multithreading, or Multiprocessing in Python"
 description: "Unlock the Secrets of Python's Programming Paradigms: Sequential, Asyncio, Multithreading, and Multiprocessing"
 pubDate: "Dec 20 2024"
-heroImage: "/post_img.webp"
+heroImage: "/blog_1.png"
 tags: ["programming"]
 ---
 
