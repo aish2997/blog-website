@@ -1,0 +1,530 @@
+{% extends 'base.html' %}
+{% load markdownify %}
+
+{% block title %}{{ project.name }} - {{ block.super }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Project Hero */
+    .project-hero {
+        padding: 6rem 0 4rem;
+        margin-top: 20px;
+        background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .project-hero-content {
+        max-width: 900px;
+        margin: 0 auto;
+        text-align: center;
+    }
+
+    .project-badge {
+        display: inline-block;
+        padding: 0.375rem 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 99px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 1.5rem;
+    }
+
+    .project-title {
+        font-size: clamp(2.5rem, 5vw, 4rem);
+        font-weight: 900;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+    }
+
+    .project-short-desc {
+        font-size: 1.375rem;
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+        line-height: 1.5;
+    }
+
+    .project-meta {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 2rem;
+        flex-wrap: wrap;
+        margin-bottom: 2rem;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+    }
+
+    .project-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .project-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    /* Project Image */
+    .project-image-container {
+        margin: -2rem 0 3rem;
+        position: relative;
+    }
+
+    .project-image {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-xl);
+        border: 1px solid var(--border);
+    }
+
+    .project-image img {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
+    /* Content Container */
+    .content-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 0 24px;
+    }
+
+    /* Technology Section */
+    .tech-section {
+        padding: 3rem 0;
+    }
+
+    .section-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+    }
+
+    .tech-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+
+    .tech-item {
+        padding: 1rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        text-align: center;
+        transition: var(--transition);
+    }
+
+    .tech-item:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--accent);
+    }
+
+    .tech-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .tech-description {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+    }
+
+    /* Description Section */
+    .description-section {
+        padding: 3rem 0;
+        border-top: 1px solid var(--border);
+    }
+
+    .project-description {
+        font-size: 1.125rem;
+        line-height: 1.8;
+        color: var(--text-secondary);
+    }
+
+    .project-description h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 2rem 0 1rem;
+        color: var(--text-primary);
+    }
+
+    .project-description h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 1.5rem 0 0.75rem;
+        color: var(--text-primary);
+    }
+
+    .project-description p {
+        margin-bottom: 1.5rem;
+    }
+
+    .project-description ul,
+    .project-description ol {
+        margin: 1.5rem 0;
+        padding-left: 2rem;
+    }
+
+    .project-description li {
+        margin-bottom: 0.5rem;
+    }
+
+    .project-description code {
+        background: var(--bg-secondary);
+        padding: 0.125rem 0.375rem;
+        border-radius: var(--radius);
+        font-family: var(--font-mono);
+        font-size: 0.9em;
+    }
+
+    .project-description pre {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1.5rem;
+        overflow-x: auto;
+        margin: 2rem 0;
+    }
+
+    .project-description pre code {
+        background: transparent;
+        padding: 0;
+    }
+
+    .project-description blockquote {
+        border-left: 4px solid var(--accent);
+        padding-left: 1.5rem;
+        margin: 2rem 0;
+        font-style: italic;
+        color: var(--text-secondary);
+    }
+
+    /* Gallery Section */
+    .gallery-section {
+        padding: 3rem 0;
+        border-top: 1px solid var(--border);
+    }
+
+    .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .gallery-item {
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .gallery-item:hover {
+        transform: scale(1.02);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .gallery-item img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+    }
+
+    /* Related Projects */
+    .related-section {
+        padding: 3rem 0;
+        border-top: 1px solid var(--border);
+    }
+
+    .related-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .related-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1.5rem;
+        text-decoration: none;
+        transition: var(--transition);
+    }
+
+    .related-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--accent);
+    }
+
+    .related-card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .related-card-description {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin-bottom: 1rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .related-card-tech {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .related-tech-tag {
+        padding: 0.25rem 0.5rem;
+        background: var(--bg-secondary);
+        border-radius: var(--radius);
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    /* CTA Section */
+    .cta-section {
+        padding: 4rem 0;
+        text-align: center;
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border);
+        margin-top: 4rem;
+    }
+
+    .cta-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    .cta-description {
+        font-size: 1.125rem;
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .project-title {
+            font-size: 2rem;
+        }
+
+        .project-short-desc {
+            font-size: 1.125rem;
+        }
+
+        .tech-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .gallery-grid,
+        .related-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Project Hero Section -->
+<section class="project-hero">
+    <div class="container">
+        <div class="project-hero-content">
+            {% if project.featured %}
+            <span class="project-badge">Featured Project</span>
+            {% endif %}
+
+            <h1 class="project-title">{{ project.title }}</h1>
+            <p class="project-short-desc">{{ project.short_description }}</p>
+
+            <div class="project-meta">
+                <span class="project-meta-item">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    {{ project.created_at|date:"F Y" }}
+                </span>
+                <span class="project-meta-item">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    {{ project.view_count }} views
+                </span>
+                {% if project.project_type %}
+                <span class="project-meta-item">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                    </svg>
+                    {{ project.get_project_type_display }}
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="project-actions">
+                {% if project.live_url %}
+                <a href="{{ project.live_url }}" target="_blank" class="btn">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
+                    View Live
+                </a>
+                {% endif %}
+                {% if project.github_url %}
+                <a href="{{ project.github_url }}" target="_blank" class="btn btn-outline">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    View on GitHub
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Project Image -->
+{% if project.thumbnail %}
+<section class="project-image-container">
+    <div class="container">
+        <div class="project-image">
+            <img src="{{ project.thumbnail.url }}" alt="{{ project.title }}">
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Technologies Section -->
+{% if project.technologies.all %}
+<section class="content-container">
+    <div class="tech-section">
+        <h2 class="section-title">Technologies Used</h2>
+        <div class="tech-grid">
+            {% for tech in project.technologies.all %}
+            <div class="tech-item">
+                <div class="tech-name">{{ tech.name }}</div>
+                {% if tech.description %}
+                <div class="tech-description">{{ tech.description }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Description Section -->
+<section class="content-container">
+    <div class="description-section">
+        <h2 class="section-title">Project Description</h2>
+        <div class="project-description">
+            {{ project.description|markdownify }}
+        </div>
+    </div>
+</section>
+
+<!-- Gallery Section -->
+{% if project.gallery_images.all %}
+<section class="content-container">
+    <div class="gallery-section">
+        <h2 class="section-title">Project Gallery</h2>
+        <div class="gallery-grid">
+            {% for image in project.gallery_images.all %}
+            <div class="gallery-item">
+                <img src="{{ image.image.url }}" alt="{{ image.caption|default:project.title }}">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Related Projects -->
+{% if related_projects %}
+<section class="content-container">
+    <div class="related-section">
+        <h2 class="section-title">Related Projects</h2>
+        <div class="related-grid">
+            {% for related in related_projects %}
+            <a href="{% url 'projects:detail' related.slug %}" class="related-card">
+                <h3 class="related-card-title">{{ related.title }}</h3>
+                <p class="related-card-description">{{ related.short_description }}</p>
+                <div class="related-card-tech">
+                    {% for tech in related.technologies.all|slice:":3" %}
+                    <span class="related-tech-tag">{{ tech.name }}</span>
+                    {% endfor %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="container">
+        <h2 class="cta-title">Interested in This Project?</h2>
+        <p class="cta-description">
+            Feel free to explore the code, contribute, or reach out with questions
+        </p>
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <a href="{% url 'projects:list' %}" class="btn btn-outline">View All Projects</a>
+            <a href="mailto:{{ CONTACT_EMAIL|default:'hello@example.com' }}" class="btn">Get In Touch</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Lightbox for gallery images
+    document.querySelectorAll('.gallery-item').forEach(item => {
+        item.addEventListener('click', function() {
+            // You can implement a lightbox here
+        });
+    });
+
+    // Smooth scroll animation
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.tech-section, .description-section, .gallery-section, .related-section').forEach(section => {
+        section.style.opacity = '0';
+        section.style.transform = 'translateY(30px)';
+        section.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+        observer.observe(section);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,51 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/portfolio:$COMMIT_SHA', '.']
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/portfolio:$COMMIT_SHA']
+
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'portfolio'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/portfolio:$COMMIT_SHA'
+      - '--region'
+      - '$_REGION'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--add-cloudsql-instances'
+      - '$_CLOUD_SQL_CONNECTION_NAME'
+      - '--set-env-vars'
+      - 'GCP_PROJECT_ID=$PROJECT_ID,CLOUD_SQL_CONNECTION_NAME=$_CLOUD_SQL_CONNECTION_NAME,DB_NAME=$_DB_NAME,DB_USER=$_DB_USER,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME,DJANGO_SETTINGS_MODULE=portfolio.settings_production'
+      - '--set-secrets'
+      - 'DB_PASSWORD=DB_PASSWORD:latest,DJANGO_SECRET_KEY=DJANGO_SECRET_KEY:latest,SENDGRID_API_KEY=SENDGRID_API_KEY:latest'
+      - '--min-instances'
+      - '1'
+      - '--max-instances'
+      - '10'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+
+substitutions:
+  _REGION: us-central1
+  _CLOUD_SQL_CONNECTION_NAME: ${PROJECT_ID}:us-central1:portfolio-db
+  _DB_NAME: portfolio
+  _DB_USER: postgres
+  _GCS_BUCKET_NAME: ${PROJECT_ID}-portfolio-media
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+# Optional: Tag the image as 'latest'
+images:
+  - 'gcr.io/$PROJECT_ID/portfolio:$COMMIT_SHA'

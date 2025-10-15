@@ -1,0 +1,90 @@
+name: Bootstrap Infrastructure
+
+# This workflow should be run once to set up the initial GCP resources
+# Run manually via GitHub Actions UI
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: 'GCP Project ID'
+        required: true
+        type: string
+      region:
+        description: 'GCP Region'
+        required: true
+        default: 'us-central1'
+        type: string
+      github_owner:
+        description: 'GitHub Username or Organization'
+        required: true
+        type: string
+      github_repository:
+        description: 'GitHub Repository Name'
+        required: true
+        type: string
+
+jobs:
+  bootstrap:
+    name: Bootstrap GCP Infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Initialize Terraform
+        working-directory: ./terraform/bootstrap
+        run: terraform init
+
+      - name: Plan Terraform
+        working-directory: ./terraform/bootstrap
+        run: |
+          terraform plan \
+            -var="project_id=${{ inputs.project_id }}" \
+            -var="region=${{ inputs.region }}" \
+            -var="github_owner=${{ inputs.github_owner }}" \
+            -var="github_repository=${{ inputs.github_repository }}" \
+            -out=tfplan
+
+      - name: Apply Terraform
+        working-directory: ./terraform/bootstrap
+        run: terraform apply tfplan
+
+      - name: Save Terraform Outputs
+        working-directory: ./terraform/bootstrap
+        run: |
+          echo "## Bootstrap Complete! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Important Outputs" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**State Bucket:** $(terraform output -raw state_bucket)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Artifact Registry:** $(terraform output -raw artifact_registry_repository)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**WIF Provider:** $(terraform output -raw workload_identity_provider)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**GitHub Actions SA:** $(terraform output -raw github_actions_service_account)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Note the outputs above" >> $GITHUB_STEP_SUMMARY
+          echo "2. Configure repository secrets:" >> $GITHUB_STEP_SUMMARY
+          echo "   - WIF_PROVIDER: The WIF Provider value" >> $GITHUB_STEP_SUMMARY
+          echo "   - WIF_SERVICE_ACCOUNT: The GitHub Actions SA value" >> $GITHUB_STEP_SUMMARY
+          echo "   - GCP_PROJECT_ID: ${{ inputs.project_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "   - GCP_REGION: ${{ inputs.region }}" >> $GITHUB_STEP_SUMMARY
+          echo "   - TF_STATE_BUCKET: The State Bucket value" >> $GITHUB_STEP_SUMMARY
+          echo "3. Run the deployment workflow to deploy the application" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,650 @@
+{% extends 'base.html' %}
+
+{% block extra_head %}
+<style>
+    /* Hero Section */
+    .hero {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        background: var(--bg-primary);
+    }
+
+    .hero-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        opacity: 0.1;
+        background-image:
+            repeating-linear-gradient(90deg, var(--text-primary) 0, var(--text-primary) 1px, transparent 1px, transparent 80px),
+            repeating-linear-gradient(0deg, var(--text-primary) 0, var(--text-primary) 1px, transparent 1px, transparent 80px);
+    }
+
+    [data-theme="dark"] .hero-background {
+        opacity: 0.15;
+        background-image:
+            repeating-linear-gradient(90deg, #ffffff 0, #ffffff 1px, transparent 1px, transparent 80px),
+            repeating-linear-gradient(0deg, #ffffff 0, #ffffff 1px, transparent 1px, transparent 80px);
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        padding: 2rem;
+    }
+
+    .hero-greeting {
+        font-size: 1.125rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        margin-bottom: 1rem;
+        opacity: 0;
+        animation: fadeInUp 0.8s ease forwards;
+    }
+
+    .hero-title {
+        font-size: clamp(2.5rem, 8vw, 5rem);
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -0.04em;
+        margin-bottom: 1.5rem;
+        opacity: 0;
+        animation: fadeInUp 0.8s ease 0.2s forwards;
+    }
+
+    .hero-subtitle {
+        font-size: clamp(1.25rem, 3vw, 1.75rem);
+        color: var(--text-secondary);
+        font-weight: 300;
+        margin-bottom: 3rem;
+        opacity: 0;
+        animation: fadeInUp 0.8s ease 0.4s forwards;
+    }
+
+    .hero-cta {
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        opacity: 0;
+        animation: fadeInUp 0.8s ease 0.6s forwards;
+    }
+
+    .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 2rem;
+        max-width: 600px;
+        margin: 4rem auto 0;
+        opacity: 0;
+        animation: fadeInUp 0.8s ease 0.8s forwards;
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* Sections */
+    .section {
+        padding: 6rem 0;
+    }
+
+    .section-header {
+        text-align: center;
+        margin-bottom: 4rem;
+    }
+
+    .section-title {
+        font-size: 3rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        margin-bottom: 1rem;
+    }
+
+    .section-description {
+        font-size: 1.25rem;
+        color: var(--text-secondary);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* Featured Cards Grid */
+    .featured-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .featured-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        transition: var(--transition);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .featured-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
+        opacity: 0;
+        transition: var(--transition);
+    }
+
+    .featured-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+        border-color: transparent;
+    }
+
+    .featured-card:hover::before {
+        opacity: 1;
+    }
+
+    .featured-date {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        margin-bottom: 0.75rem;
+    }
+
+    .featured-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .featured-excerpt {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .featured-link {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: var(--transition);
+    }
+
+    .featured-link:hover {
+        gap: 1rem;
+        color: var(--accent);
+    }
+
+    /* Project Card Special */
+    .project-card {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .project-image {
+        width: 100%;
+        height: 200px;
+        margin: -2rem -2rem 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        color: white;
+        font-weight: 900;
+    }
+
+    .project-tech {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .tech-tag {
+        padding: 0.25rem 0.625rem;
+        background: var(--bg-secondary);
+        border-radius: var(--radius);
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        border: 1px solid var(--border);
+    }
+
+    /* Skills Section */
+    .skills-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 3rem;
+        margin-top: 3rem;
+    }
+
+    .skill-category {
+        text-align: center;
+    }
+
+    .skill-icon {
+        width: 60px;
+        height: 60px;
+        margin: 0 auto 1.5rem;
+        background: var(--bg-secondary);
+        border-radius: var(--radius-lg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        border: 1px solid var(--border);
+    }
+
+    .skill-category-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .skill-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+    }
+
+    .skill-item {
+        padding: 0.5rem 1rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 99px;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        transition: var(--transition);
+    }
+
+    .skill-item:hover {
+        background: var(--accent);
+        color: var(--bg-primary);
+        border-color: var(--accent);
+    }
+
+    [data-theme="dark"] .skill-item:hover {
+        color: #000000;
+    }
+
+    /* CTA Section */
+    .cta-section {
+        background: var(--bg-secondary);
+        padding: 5rem 0;
+        text-align: center;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .cta-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+    }
+
+    .cta-description {
+        font-size: 1.25rem;
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+    }
+
+    .cta-buttons {
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+
+    .float {
+        animation: float 3s ease-in-out infinite;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.5rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+        }
+
+        .featured-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-background"></div>
+    <div class="hero-content">
+        <p class="hero-greeting">Hello, I'm</p>
+        <h1 class="hero-title">{{ profile.full_name|default:"Aishwarya Bhargava" }}</h1>
+        <p class="hero-subtitle">{{ profile.title|default:"Full Stack Developer & Software Engineer" }}</p>
+
+        <div class="hero-cta">
+            <a href="/projects/" class="btn">View Projects</a>
+            <a href="/blog/" class="btn btn-outline">Read Blog</a>
+            <a href="/cv/" class="btn btn-outline">Download CV</a>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-item">
+                <div class="stat-value">{{ total_projects|default:0 }}</div>
+                <div class="stat-label">Projects</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ total_posts|default:0 }}</div>
+                <div class="stat-label">Blog Posts</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ total_visitors|default:0 }}</div>
+                <div class="stat-label">Visitors</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Projects Section -->
+{% if featured_projects %}
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Featured Projects</h2>
+            <p class="section-description">
+                Recent work and open-source contributions
+            </p>
+        </div>
+
+        <div class="featured-grid">
+            {% for project in featured_projects %}
+            <div class="featured-card project-card" onclick="window.location.href='/projects/{{ project.slug }}/'">
+                <div class="project-image">
+                    {% if project.thumbnail %}
+                        <img src="{{ project.thumbnail.url }}" alt="{{ project.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+                    {% else %}
+                        {{ project.title|first }}
+                    {% endif %}
+                </div>
+                <h3 class="featured-title">{{ project.title }}</h3>
+                <p class="featured-excerpt">{{ project.short_description }}</p>
+
+                <div class="project-tech">
+                    {% for tech in project.technologies.all|slice:":4" %}
+                    <span class="tech-tag">{{ tech.name }}</span>
+                    {% endfor %}
+                </div>
+
+                <a href="/projects/{{ project.slug }}/" class="featured-link" onclick="event.stopPropagation()">
+                    View Project →
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="text-align: center;">
+            <a href="/projects/" class="btn btn-outline">View All Projects</a>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Latest Blog Posts -->
+{% if featured_posts %}
+<section class="section" style="background: var(--bg-secondary);">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Latest Articles</h2>
+            <p class="section-description">
+                Thoughts on technology, development, and design
+            </p>
+        </div>
+
+        <div class="featured-grid">
+            {% for post in featured_posts %}
+            <div class="featured-card" onclick="window.location.href='/blog/{{ post.slug }}/'">
+                <div class="featured-date">{{ post.published_date|date:"F d, Y" }}</div>
+                <h3 class="featured-title">{{ post.title }}</h3>
+                <p class="featured-excerpt">{{ post.excerpt|default:post.content|striptags|truncatewords:30 }}</p>
+                <a href="/blog/{{ post.slug }}/" class="featured-link" onclick="event.stopPropagation()">
+                    Read More →
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="text-align: center;">
+            <a href="/blog/" class="btn btn-outline">View All Posts</a>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Skills Section -->
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Technical Skills</h2>
+            <p class="section-description">
+                Technologies and tools I work with
+            </p>
+        </div>
+
+        <div class="skills-grid">
+            <div class="skill-category">
+                <div class="skill-icon">FE</div>
+                <h3 class="skill-category-title">Frontend</h3>
+                <div class="skill-list">
+                    <span class="skill-item">React</span>
+                    <span class="skill-item">TypeScript</span>
+                    <span class="skill-item">Next.js</span>
+                    <span class="skill-item">Vue.js</span>
+                    <span class="skill-item">Tailwind CSS</span>
+                </div>
+            </div>
+
+            <div class="skill-category">
+                <div class="skill-icon">BE</div>
+                <h3 class="skill-category-title">Backend</h3>
+                <div class="skill-list">
+                    <span class="skill-item">Python</span>
+                    <span class="skill-item">Django</span>
+                    <span class="skill-item">Node.js</span>
+                    <span class="skill-item">FastAPI</span>
+                    <span class="skill-item">PostgreSQL</span>
+                </div>
+            </div>
+
+            <div class="skill-category">
+                <div class="skill-icon">☁️</div>
+                <h3 class="skill-category-title">Cloud & DevOps</h3>
+                <div class="skill-list">
+                    <span class="skill-item">Google Cloud</span>
+                    <span class="skill-item">AWS</span>
+                    <span class="skill-item">Docker</span>
+                    <span class="skill-item">Kubernetes</span>
+                    <span class="skill-item">CI/CD</span>
+                </div>
+            </div>
+
+            <div class="skill-category">
+                <div class="skill-icon">🛠</div>
+                <h3 class="skill-category-title">Tools</h3>
+                <div class="skill-list">
+                    <span class="skill-item">Git</span>
+                    <span class="skill-item">VS Code</span>
+                    <span class="skill-item">Figma</span>
+                    <span class="skill-item">Postman</span>
+                    <span class="skill-item">Jira</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="container">
+        <h2 class="cta-title">Let's Work Together</h2>
+        <p class="cta-description">
+            I'm always interested in hearing about new opportunities and projects
+        </p>
+        <div class="cta-buttons">
+            <a href="mailto:{{ CONTACT_EMAIL|default:'hello@example.com' }}" class="btn">Get In Touch</a>
+            <a href="/cv/" class="btn btn-outline">View Resume</a>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">About Me</h2>
+        </div>
+
+        <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+            <p style="font-size: 1.25rem; line-height: 1.8; color: var(--text-secondary); margin-bottom: 2rem;">
+                {{ profile.bio|default:"I'm a passionate full-stack developer with expertise in building scalable web applications. I love working with modern technologies and solving complex problems." }}
+            </p>
+
+            {% if profile.location %}
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">
+                📍 {{ profile.location }}
+            </p>
+            {% endif %}
+
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                {% if GITHUB_URL %}
+                <a href="{{ GITHUB_URL }}" target="_blank" class="btn btn-outline">GitHub</a>
+                {% endif %}
+                {% if LINKEDIN_URL %}
+                <a href="{{ LINKEDIN_URL }}" target="_blank" class="btn btn-outline">LinkedIn</a>
+                {% endif %}
+                {% if TWITTER_URL %}
+                <a href="{{ TWITTER_URL }}" target="_blank" class="btn btn-outline">Twitter</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Add intersection observer for scroll animations
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+
+    // Observe all sections
+    document.querySelectorAll('.section').forEach(section => {
+        section.style.opacity = '0';
+        section.style.transform = 'translateY(30px)';
+        section.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+        observer.observe(section);
+    });
+
+    // Counter animation for stats
+    function animateCounter(element, target) {
+        let current = 0;
+        const increment = target / 50;
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                element.textContent = target;
+                clearInterval(timer);
+            } else {
+                element.textContent = Math.floor(current);
+            }
+        }, 20);
+    }
+
+    // Animate stat counters when in view
+    const statObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && !entry.target.animated) {
+                const value = parseInt(entry.target.textContent);
+                animateCounter(entry.target, value);
+                entry.target.animated = true;
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.stat-value').forEach(stat => {
+        statObserver.observe(stat);
+    });
+</script>
+{% endblock %}
