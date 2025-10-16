@@ -37,6 +37,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Debug Environment
+        run: |
+          echo "PROJECT_ID: ${{ env.PROJECT_ID }}"
+          echo "REGION: ${{ env.REGION }}"
+          echo "ENVIRONMENT: ${{ env.ENVIRONMENT }}"
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -71,6 +77,9 @@ jobs:
         id: image_info
         run: |
           IMAGE_BASE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/portfolio-images/portfolio"
+          echo "Building image reference: ${IMAGE_BASE}"
+          echo "Latest tag: ${IMAGE_BASE}:latest"
+          echo "SHA tag: ${IMAGE_BASE}:${{ github.sha }}"
           echo "image_tag=${IMAGE_BASE}:latest" >> $GITHUB_OUTPUT
           echo "image_sha=${IMAGE_BASE}:${{ github.sha }}" >> $GITHUB_OUTPUT
 
@@ -116,6 +125,15 @@ jobs:
         run: |
           # Use the image that was just built
           DOCKER_IMAGE="${{ needs.build-image.outputs.image_tag }}"
+
+          echo "Docker image from build-image job: ${DOCKER_IMAGE}"
+
+          # Validate that DOCKER_IMAGE is not empty
+          if [ -z "$DOCKER_IMAGE" ]; then
+            echo "❌ Error: DOCKER_IMAGE is empty!"
+            echo "build-image outputs may not have been set correctly"
+            exit 1
+          fi
 
           terraform plan \
             -var="project_id=${{ env.PROJECT_ID }}" \
