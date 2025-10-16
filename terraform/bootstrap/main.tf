@@ -27,6 +27,7 @@ resource "google_project_service" "required_apis" {
     "secretmanager.googleapis.com",
     "storage.googleapis.com",
     "cloudbuild.googleapis.com",
+    "vpcaccess.googleapis.com",
   ])
 
   service            = each.value
@@ -132,6 +133,7 @@ resource "google_project_iam_member" "github_actions_roles" {
     "roles/iam.serviceAccountUser",
     "roles/compute.networkAdmin",
     "roles/resourcemanager.projectIamAdmin",
+    "roles/vpcaccess.admin",
   ])
 
   project = var.project_id

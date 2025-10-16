@@ -49,7 +49,7 @@ resource "google_compute_subnetwork" "subnet" {
 
 # VPC Connector for Cloud Run to access Cloud SQL
 resource "google_vpc_access_connector" "connector" {
-  name          = "portfolio-connector-${var.environment}"
+  name          = "portfolio-con-${var.environment}"
   region        = var.region
   network       = google_compute_network.vpc.name
   ip_cidr_range = "10.1.0.0/28"
