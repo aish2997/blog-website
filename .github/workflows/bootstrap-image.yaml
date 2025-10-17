@@ -4,6 +4,10 @@ name: Bootstrap Initial Docker Image
 # This solves the chicken-egg problem for first deployment
 # Can be deleted after successful execution
 
+# Required GitHub Secrets:
+# - WIF_PROVIDER: Workload Identity Federation provider
+# - WIF_SERVICE_ACCOUNT: Service account email for WIF
+
 on:
   workflow_dispatch:
     inputs:

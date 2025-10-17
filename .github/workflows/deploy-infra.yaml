@@ -1,5 +1,12 @@
 name: Deploy Infrastructure
 
+# Required GitHub Secrets:
+# - GCP_PROJECT_ID: Your GCP project ID
+# - GCP_REGION: GCP region (optional, defaults to us-central1)
+# - WIF_PROVIDER: Workload Identity Federation provider
+# - WIF_SERVICE_ACCOUNT: Service account email for WIF
+# - TF_STATE_BUCKET: Terraform state bucket name
+
 on:
   # Trigger on changes to Terraform files
   push:
@@ -121,11 +128,13 @@ jobs:
             -backend-config="prefix=terraform/state/${{ needs.determine-environment.outputs.environment }}"
 
       - name: Terraform Format Check
+        id: fmt
         working-directory: ./terraform/infrastructure
         run: terraform fmt -check -recursive
         continue-on-error: true
 
       - name: Terraform Validate
+        id: validate
         working-directory: ./terraform/infrastructure
         run: terraform validate
 
@@ -149,7 +158,7 @@ jobs:
 
       - name: Save Plan
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ needs.determine-environment.outputs.environment }}
           path: terraform/infrastructure/tfplan

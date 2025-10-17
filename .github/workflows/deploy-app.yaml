@@ -1,5 +1,12 @@
 name: Deploy Application
 
+# Required GitHub Secrets:
+# - GCP_PROJECT_ID: Your GCP project ID
+# - GCP_REGION: GCP region (optional, defaults to us-central1)
+# - WIF_PROVIDER: Workload Identity Federation provider
+# - WIF_SERVICE_ACCOUNT: Service account email for WIF
+# - TF_STATE_BUCKET: Terraform state bucket name
+
 on:
   # Trigger on code changes
   push:
@@ -422,7 +429,7 @@ jobs:
           echo "## Status" >> $GITHUB_STEP_SUMMARY
           echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Build | ${{ needs.build-and-push.result == 'success' && '✅ Success' || needs.build-and-push.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ (needs.build-and-push.result == 'success' && '✅ Success') || (needs.build-and-push.result == 'skipped' && '⏭️ Skipped') || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Infrastructure | ${{ needs.deploy-infrastructure.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Migrations | ${{ needs.run-migrations.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Static Files | ${{ needs.collect-static.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
