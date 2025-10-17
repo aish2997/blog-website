@@ -1,0 +1,97 @@
+name: Bootstrap Initial Docker Image
+
+# One-time workflow to create an initial Docker image in Artifact Registry
+# This solves the chicken-egg problem for first deployment
+# Can be deleted after successful execution
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: 'GCP Project ID'
+        required: true
+        type: string
+      region:
+        description: 'GCP Region'
+        required: true
+        default: 'us-central1'
+        type: string
+
+jobs:
+  build-initial-image:
+    name: Build and Push Initial Docker Image
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ inputs.project_id }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ inputs.region }}-docker.pkg.dev --quiet
+
+      - name: Build Docker Image
+        run: |
+          echo "Building initial Docker image..."
+
+          # Define image repository
+          IMAGE_REPO="${{ inputs.region }}-docker.pkg.dev/${{ inputs.project_id }}/portfolio-images/portfolio"
+
+          # Build the actual application image
+          docker build \
+            -f docker/Dockerfile \
+            -t ${IMAGE_REPO}:initial \
+            -t ${IMAGE_REPO}:latest \
+            .
+
+          echo "Docker image built successfully"
+
+      - name: Push Docker Image to Artifact Registry
+        run: |
+          IMAGE_REPO="${{ inputs.region }}-docker.pkg.dev/${{ inputs.project_id }}/portfolio-images/portfolio"
+
+          echo "Pushing images to Artifact Registry..."
+          docker push ${IMAGE_REPO}:initial
+          docker push ${IMAGE_REPO}:latest
+
+          echo "Initial images pushed successfully"
+
+      - name: Verify Image in Registry
+        run: |
+          echo "Verifying image exists in Artifact Registry..."
+
+          gcloud artifacts docker images list \
+            ${{ inputs.region }}-docker.pkg.dev/${{ inputs.project_id }}/portfolio-images \
+            --include-tags \
+            --format="table(image,tags)" \
+            --filter="image:portfolio"
+
+      - name: Summary
+        run: |
+          echo "## Bootstrap Image Complete! 🐳" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Initial Docker Image Created" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository:** ${{ inputs.region }}-docker.pkg.dev/${{ inputs.project_id }}/portfolio-images/portfolio" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags:** initial, latest" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Run the **deploy-infra** workflow to deploy infrastructure" >> $GITHUB_STEP_SUMMARY
+          echo "2. Run the **deploy-app** workflow to deploy the application" >> $GITHUB_STEP_SUMMARY
+          echo "3. This bootstrap-image workflow can be deleted after successful deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The chicken-egg problem has been solved! 🎉" >> $GITHUB_STEP_SUMMARY

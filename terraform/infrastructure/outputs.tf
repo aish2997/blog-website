@@ -8,6 +8,11 @@ output "cloud_sql_instance_name" {
   value       = google_sql_database_instance.postgres.name
 }
 
+output "database_instance_name" {
+  description = "Name of the Cloud SQL instance (alias for workflows)"
+  value       = google_sql_database_instance.postgres.name
+}
+
 output "cloud_sql_connection_name" {
   description = "Connection name for Cloud SQL"
   value       = google_sql_database_instance.postgres.connection_name

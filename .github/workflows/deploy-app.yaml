@@ -1,0 +1,468 @@
+name: Deploy Application
+
+on:
+  # Trigger on code changes
+  push:
+    branches:
+      - main
+      - production
+    paths-ignore:
+      - 'terraform/**'
+      - '.github/workflows/bootstrap*.yaml'
+      - '.github/workflows/deploy-infra.yaml'
+      - '*.md'
+      - '.gitignore'
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      skip_build:
+        description: 'Skip Docker build (use existing image)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ secrets.GCP_REGION || 'us-central1' }}
+
+jobs:
+  setup:
+    name: Setup Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.config.outputs.environment }}
+      image_tag: ${{ steps.config.outputs.image_tag }}
+      image_repo: ${{ steps.config.outputs.image_repo }}
+      skip_build: ${{ steps.config.outputs.skip_build }}
+
+    steps:
+      - name: Configure Deployment
+        id: config
+        run: |
+          # Determine environment
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
+            SKIP_BUILD="${{ github.event.inputs.skip_build }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/production" ]]; then
+            ENVIRONMENT="production"
+            SKIP_BUILD="false"
+          else
+            ENVIRONMENT="staging"
+            SKIP_BUILD="false"
+          fi
+
+          # Generate unique image tag using git SHA
+          IMAGE_TAG="${{ github.sha }}"
+          IMAGE_REPO="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/portfolio-images/portfolio"
+
+          echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "image_repo=${IMAGE_REPO}" >> $GITHUB_OUTPUT
+          echo "skip_build=${SKIP_BUILD}" >> $GITHUB_OUTPUT
+
+          echo "### Deployment Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** ${ENVIRONMENT}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag:** ${IMAGE_TAG}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Skip Build:** ${SKIP_BUILD}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository:** ${IMAGE_REPO}" >> $GITHUB_STEP_SUMMARY
+
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.skip_build != 'true'
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: false
+          load: true
+          tags: |
+            ${{ needs.setup.outputs.image_repo }}:${{ needs.setup.outputs.image_tag }}
+            ${{ needs.setup.outputs.image_repo }}:latest
+            ${{ needs.setup.outputs.image_repo }}:${{ needs.setup.outputs.environment }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ needs.setup.outputs.image_tag }}
+
+      - name: Run Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ needs.setup.outputs.image_repo }}:${{ needs.setup.outputs.image_tag }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true
+
+      - name: Upload Security Scan Results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+        continue-on-error: true
+
+      - name: Push Docker Image
+        run: |
+          docker push ${{ needs.setup.outputs.image_repo }}:${{ needs.setup.outputs.image_tag }}
+          docker push ${{ needs.setup.outputs.image_repo }}:latest
+          docker push ${{ needs.setup.outputs.image_repo }}:${{ needs.setup.outputs.environment }}
+
+          echo "### Docker Image Pushed 🐳" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** ${{ needs.setup.outputs.image_repo }}:${{ needs.setup.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Also tagged as:** latest, ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+
+  deploy-infrastructure:
+    name: Update Infrastructure with New Image
+    runs-on: ubuntu-latest
+    needs: [setup, build-and-push]
+    if: always() && needs.setup.result == 'success' && (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      actions: 'write'
+
+    environment:
+      name: ${{ needs.setup.outputs.environment }}
+      url: ${{ steps.get-url.outputs.service_url }}
+
+    outputs:
+      service_url: ${{ steps.get-url.outputs.service_url }}
+      service_name: ${{ steps.get-url.outputs.service_name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trigger Infrastructure Deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const result = await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy-infra.yaml',
+              ref: context.ref,
+              inputs: {
+                environment: '${{ needs.setup.outputs.environment }}',
+                docker_image_tag: '${{ needs.setup.outputs.image_tag }}',
+                apply: 'true'
+              }
+            });
+
+            console.log('Infrastructure deployment triggered');
+
+            // Wait for workflow to start
+            await new Promise(r => setTimeout(r, 5000));
+
+            // Get the workflow run
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy-infra.yaml',
+              status: 'in_progress',
+              per_page: 1
+            });
+
+            if (runs.data.workflow_runs.length > 0) {
+              const runId = runs.data.workflow_runs[0].id;
+              console.log(`Workflow run started: ${runId}`);
+
+              // Wait for completion (max 10 minutes)
+              const maxWait = 600000; // 10 minutes
+              const interval = 15000; // 15 seconds
+              let elapsed = 0;
+
+              while (elapsed < maxWait) {
+                const run = await github.rest.actions.getWorkflowRun({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  run_id: runId
+                });
+
+                if (run.data.status === 'completed') {
+                  if (run.data.conclusion === 'success') {
+                    console.log('Infrastructure deployment completed successfully');
+                    return;
+                  } else {
+                    throw new Error(`Infrastructure deployment failed: ${run.data.conclusion}`);
+                  }
+                }
+
+                await new Promise(r => setTimeout(r, interval));
+                elapsed += interval;
+                console.log(`Waiting for infrastructure deployment... (${elapsed/1000}s)`);
+              }
+
+              throw new Error('Infrastructure deployment timed out');
+            }
+
+      - name: Get Service Details
+        id: get-url
+        run: |
+          # Extract service details from Terraform outputs
+          SERVICE_NAME="portfolio-${{ needs.setup.outputs.environment }}"
+          SERVICE_URL="https://${SERVICE_NAME}-${PROJECT_ID}.a.run.app"
+
+          echo "service_name=${SERVICE_NAME}" >> $GITHUB_OUTPUT
+          echo "service_url=${SERVICE_URL}" >> $GITHUB_OUTPUT
+
+  run-migrations:
+    name: Run Database Migrations
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-infrastructure]
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Run Database Migrations
+        run: |
+          # Get Cloud SQL connection name
+          INSTANCE_NAME="portfolio-db-${{ needs.setup.outputs.environment }}"
+          CLOUD_SQL_CONNECTION=$(gcloud sql instances describe ${INSTANCE_NAME} \
+            --project=${{ env.PROJECT_ID }} \
+            --format="value(connectionName)")
+
+          # Create a one-off migration job
+          JOB_NAME="migrate-$(date +%Y%m%d-%H%M%S)"
+
+          gcloud run jobs create ${JOB_NAME} \
+            --image ${{ needs.setup.outputs.image_repo }}:${{ needs.setup.outputs.image_tag }} \
+            --region ${{ env.REGION }} \
+            --set-cloudsql-instances=${CLOUD_SQL_CONNECTION} \
+            --set-env-vars="DJANGO_SETTINGS_MODULE=portfolio.settings_production" \
+            --set-secrets="SECRET_KEY=django-secret-key:latest" \
+            --command python \
+            --args "manage.py,migrate,--no-input" \
+            --max-retries 2 \
+            --parallelism 1 \
+            --task-timeout 5m \
+            --memory 512Mi \
+            --service-account ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+          # Execute the migration job
+          echo "Running database migrations..."
+          gcloud run jobs execute ${JOB_NAME} \
+            --region ${{ env.REGION }} \
+            --wait
+
+          # Clean up the job
+          gcloud run jobs delete ${JOB_NAME} \
+            --region ${{ env.REGION }} \
+            --quiet
+
+          echo "✅ Database migrations completed successfully"
+
+  collect-static:
+    name: Collect Static Files
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-infrastructure]
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Collect and Upload Static Files
+        run: |
+          # Create a job to collect static files
+          JOB_NAME="collectstatic-$(date +%Y%m%d-%H%M%S)"
+
+          gcloud run jobs create ${JOB_NAME} \
+            --image ${{ needs.setup.outputs.image_repo }}:${{ needs.setup.outputs.image_tag }} \
+            --region ${{ env.REGION }} \
+            --set-env-vars="DJANGO_SETTINGS_MODULE=portfolio.settings_production" \
+            --set-env-vars="GCS_BUCKET_STATIC=${{ env.PROJECT_ID }}-portfolio-static-${{ needs.setup.outputs.environment }}" \
+            --set-secrets="SECRET_KEY=django-secret-key:latest" \
+            --command python \
+            --args "manage.py,collectstatic,--no-input" \
+            --max-retries 2 \
+            --parallelism 1 \
+            --task-timeout 5m \
+            --memory 512Mi \
+            --service-account ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+          # Execute the job
+          echo "Collecting static files..."
+          gcloud run jobs execute ${JOB_NAME} \
+            --region ${{ env.REGION }} \
+            --wait
+
+          # Clean up the job
+          gcloud run jobs delete ${JOB_NAME} \
+            --region ${{ env.REGION }} \
+            --quiet
+
+          echo "✅ Static files collected and uploaded"
+
+  smoke-tests:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-infrastructure, run-migrations]
+
+    steps:
+      - name: Test Application Health
+        run: |
+          URL="${{ needs.deploy-infrastructure.outputs.service_url }}"
+          echo "Testing application at ${URL}"
+
+          # Function to check endpoint
+          check_endpoint() {
+            local endpoint=$1
+            local expected=$2
+            local description=$3
+
+            response=$(curl -s -o /dev/null -w "%{http_code}" "${URL}${endpoint}")
+            if [[ ${response} -eq ${expected} ]] || [[ ${response} -eq 200 ]]; then
+              echo "✅ ${description} - HTTP ${response}"
+              return 0
+            else
+              echo "❌ ${description} - HTTP ${response} (expected ${expected})"
+              return 1
+            fi
+          }
+
+          # Wait for service to be ready
+          echo "Waiting for service to be ready..."
+          for i in {1..10}; do
+            if curl -s -o /dev/null -w "%{http_code}" ${URL} | grep -q "200\|301\|302"; then
+              echo "Service is ready!"
+              break
+            fi
+            echo "Attempt ${i}/10 - Service not ready yet..."
+            sleep 10
+          done
+
+          # Run tests
+          check_endpoint "/" 200 "Homepage"
+          check_endpoint "/blog/" 200 "Blog page"
+          check_endpoint "/projects/" 200 "Projects page"
+          check_endpoint "/admin/" 302 "Admin page (redirect to login)"
+          check_endpoint "/health/" 200 "Health check"
+
+          echo ""
+          echo "### All smoke tests passed! ✅"
+
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-infrastructure, run-migrations, collect-static, smoke-tests]
+    if: always()
+
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "# Deployment Summary 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Status badges
+          echo "## Status" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build-and-push.result == 'success' && '✅ Success' || needs.build-and-push.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Infrastructure | ${{ needs.deploy-infrastructure.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Migrations | ${{ needs.run-migrations.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Static Files | ${{ needs.collect-static.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Smoke Tests | ${{ needs.smoke-tests.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Deployment details
+          echo "## Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service URL:** ${{ needs.deploy-infrastructure.outputs.service_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag:** ${{ needs.setup.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Commit details
+          echo "## Commit Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Message:** ${{ github.event.head_commit.message }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Author:** ${{ github.event.head_commit.author.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp:** ${{ github.event.head_commit.timestamp }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Create an issue for deployment failure
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Deployment Failed: ${context.workflow} #${context.runNumber}`,
+              body: `## Deployment Failure
+
+              **Environment:** ${{ needs.setup.outputs.environment }}
+              **Workflow Run:** [#${context.runNumber}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              **Commit:** ${context.sha}
+              **Triggered By:** ${context.actor}
+
+              Please investigate the failure and retry the deployment.`,
+              labels: ['deployment-failure', 'bug']
+            });
+
+            console.log(`Issue created: ${issue.data.html_url}`);

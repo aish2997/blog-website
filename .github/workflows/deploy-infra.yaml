@@ -1,0 +1,331 @@
+name: Deploy Infrastructure
+
+on:
+  # Trigger on changes to Terraform files
+  push:
+    branches:
+      - main
+      - production
+    paths:
+      - 'terraform/infrastructure/**'
+      - '.github/workflows/deploy-infra.yaml'
+
+  # Allow manual trigger with inputs
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      docker_image_tag:
+        description: 'Docker image tag (defaults to latest)'
+        required: false
+        default: 'latest'
+        type: string
+      apply:
+        description: 'Apply Terraform changes (false = plan only)'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+  # Can be called by other workflows
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      docker_image_tag:
+        required: true
+        type: string
+
+env:
+  TF_VERSION: '1.6.0'
+  TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+  TF_VAR_region: ${{ secrets.GCP_REGION || 'us-central1' }}
+
+jobs:
+  determine-environment:
+    name: Determine Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      docker_image_tag: ${{ steps.set-env.outputs.docker_image_tag }}
+
+    steps:
+      - name: Set Environment
+        id: set-env
+        run: |
+          # Determine environment based on trigger
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
+            DOCKER_TAG="${{ github.event.inputs.docker_image_tag }}"
+          elif [[ "${{ github.event_name }}" == "workflow_call" ]]; then
+            ENVIRONMENT="${{ inputs.environment }}"
+            DOCKER_TAG="${{ inputs.docker_image_tag }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/production" ]]; then
+            ENVIRONMENT="production"
+            DOCKER_TAG="latest"
+          else
+            ENVIRONMENT="staging"
+            DOCKER_TAG="latest"
+          fi
+
+          echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+          echo "docker_image_tag=${DOCKER_TAG}" >> $GITHUB_OUTPUT
+
+          echo "### Deployment Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** ${ENVIRONMENT}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker Image Tag:** ${DOCKER_TAG}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered By:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: determine-environment
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      pull-requests: 'write'  # For PR comments
+
+    env:
+      TF_VAR_environment: ${{ needs.determine-environment.outputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Initialize Terraform
+        working-directory: ./terraform/infrastructure
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=terraform/state/${{ needs.determine-environment.outputs.environment }}"
+
+      - name: Terraform Format Check
+        working-directory: ./terraform/infrastructure
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Validate
+        working-directory: ./terraform/infrastructure
+        run: terraform validate
+
+      - name: Set Docker Image Variable
+        working-directory: ./terraform/infrastructure
+        run: |
+          # Construct the full Docker image URL
+          DOCKER_IMAGE="${{ env.TF_VAR_region }}-docker.pkg.dev/${{ env.TF_VAR_project_id }}/portfolio-images/portfolio:${{ needs.determine-environment.outputs.docker_image_tag }}"
+          echo "TF_VAR_docker_image=${DOCKER_IMAGE}" >> $GITHUB_ENV
+
+          echo "Using Docker image: ${DOCKER_IMAGE}"
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ./terraform/infrastructure
+        run: |
+          terraform plan \
+            -detailed-exitcode \
+            -out=tfplan \
+            || echo "plan_exit_code=$?" >> $GITHUB_OUTPUT
+
+      - name: Save Plan
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfplan-${{ needs.determine-environment.outputs.environment }}
+          path: terraform/infrastructure/tfplan
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `#### Terraform Plan for ${{ needs.determine-environment.outputs.environment }} 📋
+
+            #### Format Check: \`${{ steps.fmt.outcome }}\`
+            #### Validation: \`${{ steps.validate.outcome }}\`
+            #### Plan: \`${{ steps.plan.outcome }}\`
+
+            *Triggered by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: [determine-environment, terraform-plan]
+
+    # Only run if this is not a PR and apply is true
+    if: |
+      github.event_name != 'pull_request' &&
+      (github.event.inputs.apply != 'false' || github.event_name == 'push' || github.event_name == 'workflow_call')
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    environment:
+      name: ${{ needs.determine-environment.outputs.environment }}
+
+    env:
+      TF_VAR_environment: ${{ needs.determine-environment.outputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Initialize Terraform
+        working-directory: ./terraform/infrastructure
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=terraform/state/${{ needs.determine-environment.outputs.environment }}"
+
+      - name: Set Docker Image Variable
+        working-directory: ./terraform/infrastructure
+        run: |
+          DOCKER_IMAGE="${{ env.TF_VAR_region }}-docker.pkg.dev/${{ env.TF_VAR_project_id }}/portfolio-images/portfolio:${{ needs.determine-environment.outputs.docker_image_tag }}"
+          echo "TF_VAR_docker_image=${DOCKER_IMAGE}" >> $GITHUB_ENV
+
+      - name: Terraform Apply
+        id: apply
+        working-directory: ./terraform/infrastructure
+        run: |
+          terraform apply -auto-approve
+
+      - name: Get Terraform Outputs
+        id: outputs
+        working-directory: ./terraform/infrastructure
+        run: |
+          echo "service_name=$(terraform output -raw service_name)" >> $GITHUB_OUTPUT
+          echo "cloud_run_url=$(terraform output -raw cloud_run_url)" >> $GITHUB_OUTPUT
+          echo "database_instance=$(terraform output -raw database_instance_name)" >> $GITHUB_OUTPUT
+          echo "media_bucket=$(terraform output -raw media_bucket)" >> $GITHUB_OUTPUT
+          echo "static_bucket=$(terraform output -raw static_bucket)" >> $GITHUB_OUTPUT
+
+      - name: Deployment Summary
+        run: |
+          echo "## Infrastructure Deployed! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Environment: ${{ needs.determine-environment.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Resources Created/Updated" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cloud Run Service:** ${{ steps.outputs.outputs.service_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service URL:** ${{ steps.outputs.outputs.cloud_run_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Database:** ${{ steps.outputs.outputs.database_instance }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Media Bucket:** ${{ steps.outputs.outputs.media_bucket }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Static Bucket:** ${{ steps.outputs.outputs.static_bucket }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Docker Image" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag Used:** ${{ needs.determine-environment.outputs.docker_image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workflow:** ${{ github.workflow }}" >> $GITHUB_STEP_SUMMARY
+
+  verify-deployment:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: [determine-environment, terraform-apply]
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform (for outputs)
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Get Service URL
+        id: get-url
+        working-directory: ./terraform/infrastructure
+        env:
+          TF_VAR_environment: ${{ needs.determine-environment.outputs.environment }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=terraform/state/${{ needs.determine-environment.outputs.environment }}"
+
+          SERVICE_URL=$(terraform output -raw cloud_run_url)
+          echo "service_url=${SERVICE_URL}" >> $GITHUB_OUTPUT
+
+      - name: Health Check
+        run: |
+          URL="${{ steps.get-url.outputs.service_url }}"
+
+          echo "Checking service health at ${URL}..."
+
+          for i in {1..5}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" ${URL} || echo "000")
+            if [[ ${response} -eq 200 ]]; then
+              echo "✅ Service is healthy (HTTP ${response})"
+              exit 0
+            else
+              echo "⏳ Attempt ${i}/5 - HTTP ${response}"
+              sleep 10
+            fi
+          done
+
+          echo "❌ Service health check failed after 5 attempts"
+          exit 1
+
+      - name: Verify Infrastructure
+        run: |
+          echo "Verifying infrastructure components..."
+
+          # Check Cloud Run service
+          gcloud run services describe portfolio-${{ needs.determine-environment.outputs.environment }} \
+            --region=${{ env.TF_VAR_region }} \
+            --format="value(status.url)" || exit 1
+
+          # Check Cloud SQL instance
+          gcloud sql instances describe portfolio-db-${{ needs.determine-environment.outputs.environment }} \
+            --format="value(state)" || exit 1
+
+          echo "✅ All infrastructure components verified"

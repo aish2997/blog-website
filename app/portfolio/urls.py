@@ -19,6 +19,18 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
+from django.http import JsonResponse
+
+# Health check view
+def health_check(request):
+    """Simple health check endpoint for monitoring."""
+    return JsonResponse({
+        'status': 'healthy',
+        'service': 'portfolio',
+        'timestamp': settings.USE_TZ and
+            __import__('django.utils.timezone').timezone.now().isoformat() or
+            __import__('datetime').datetime.now().isoformat()
+    })
 
 # Customize admin panel
 admin.site.site_header = "Portfolio Admin"
@@ -28,6 +40,9 @@ admin.site.index_title = "Welcome to Your Portfolio Dashboard"
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('markdownx/', include('markdownx.urls')),  # For markdown editor
+
+    # Health check endpoint
+    path('health/', health_check, name='health_check'),
 
     # App URLs
     path('', include('apps.core.urls')),
