@@ -256,7 +256,7 @@ resource "google_cloud_run_service" "portfolio" {
         }
 
         env {
-          name  = "SECRET_KEY"
+          name = "SECRET_KEY"
           value_from {
             secret_key_ref {
               name = data.google_secret_manager_secret.django_secret_key.secret_id
