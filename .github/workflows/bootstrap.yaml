@@ -46,6 +46,32 @@ jobs:
       - name: Setup gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Enable Required APIs
+        run: |
+          echo "Enabling required Google Cloud APIs..."
+
+          # Set the project
+          gcloud config set project ${{ inputs.project_id }}
+
+          # Enable Cloud Resource Manager API
+          echo "Enabling Cloud Resource Manager API..."
+          gcloud services enable cloudresourcemanager.googleapis.com --project=${{ inputs.project_id }}
+
+          # Enable Identity and Access Management (IAM) API
+          echo "Enabling IAM API..."
+          gcloud services enable iam.googleapis.com --project=${{ inputs.project_id }}
+
+          # Enable other essential APIs for bootstrap
+          echo "Enabling additional required APIs..."
+          gcloud services enable serviceusage.googleapis.com --project=${{ inputs.project_id }}
+          gcloud services enable storage-api.googleapis.com --project=${{ inputs.project_id }}
+          gcloud services enable artifactregistry.googleapis.com --project=${{ inputs.project_id }}
+          gcloud services enable iamcredentials.googleapis.com --project=${{ inputs.project_id }}
+          gcloud services enable sts.googleapis.com --project=${{ inputs.project_id }}
+          gcloud services enable secretmanager.googleapis.com --project=${{ inputs.project_id }}
+
+          echo "All required APIs have been enabled successfully"
+
       - name: Initialize Terraform
         working-directory: ./terraform/bootstrap
         run: terraform init
