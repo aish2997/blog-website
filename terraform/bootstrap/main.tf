@@ -80,7 +80,7 @@ resource "google_artifact_registry_repository" "docker_repo" {
 
 # Create Workload Identity Pool
 resource "google_iam_workload_identity_pool" "github_pool" {
-  workload_identity_pool_id = "github-pool-2"
+  workload_identity_pool_id = "github-pool"
   display_name              = "GitHub Actions Pool"
   description              = "Workload Identity Pool for GitHub Actions"
 
