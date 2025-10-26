@@ -105,11 +105,26 @@ jobs:
         run: |
           set -e  # Exit on error
 
+          # Debug environment variables
+          echo "Debug: REGION = ${{ env.REGION }}"
+          echo "Debug: PROJECT_ID = ${{ env.PROJECT_ID }}"
+          echo "Debug: github.sha = ${{ github.sha }}"
+
+          # Check if required env vars are set
+          if [ -z "${{ env.REGION }}" ] || [ -z "${{ env.PROJECT_ID }}" ]; then
+            echo "❌ Error: REGION or PROJECT_ID is not set!"
+            echo "REGION: '${{ env.REGION }}'"
+            echo "PROJECT_ID: '${{ env.PROJECT_ID }}'"
+            exit 1
+          fi
+
           IMAGE_BASE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/portfolio-images/portfolio"
           IMAGE_TAG="${IMAGE_BASE}:${{ github.sha }}"
 
           echo "### 🔨 Building Docker Image" >> $GITHUB_STEP_SUMMARY
           echo "Building Docker image: ${IMAGE_TAG}"
+          echo "Image base: ${IMAGE_BASE}"
+          echo "Full tag: ${IMAGE_TAG}"
 
           # Verify Artifact Registry exists
           if ! gcloud artifacts repositories describe portfolio-images \
@@ -272,9 +287,18 @@ jobs:
             fi
           fi
 
+          # Critical: Set the output for other jobs
           echo "docker_image=${DOCKER_IMAGE}" >> $GITHUB_OUTPUT
+
+          # Debug: Verify output was set
+          echo "::notice title=Docker Image Set::docker_image=${DOCKER_IMAGE}"
+          echo "Debug: DOCKER_IMAGE variable = ${DOCKER_IMAGE}"
+          echo "Debug: GITHUB_OUTPUT file contents:"
+          cat $GITHUB_OUTPUT || echo "GITHUB_OUTPUT file not accessible"
+
           echo "### Docker Image for Deployment" >> $GITHUB_STEP_SUMMARY
           echo "- **Image:** \`${DOCKER_IMAGE}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Output Set:** \`docker_image=${DOCKER_IMAGE}\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Plan Infrastructure
         working-directory: ./terraform/infrastructure
@@ -302,6 +326,21 @@ jobs:
           echo "service_name=$(terraform output -raw service_name)" >> $GITHUB_OUTPUT
           echo "cloud_run_url=$(terraform output -raw cloud_run_url)" >> $GITHUB_OUTPUT
 
+      - name: Verify Infrastructure Outputs
+        run: |
+          echo "### Infrastructure Job Outputs" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service Name:** ${{ steps.terraform_output.outputs.service_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cloud Run URL:** ${{ steps.terraform_output.outputs.cloud_run_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker Image:** ${{ steps.docker_image.outputs.docker_image }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "These outputs will be passed to the deploy-application job." >> $GITHUB_STEP_SUMMARY
+
+          # Final verification
+          if [ -z "${{ steps.docker_image.outputs.docker_image }}" ]; then
+            echo "⚠️ WARNING: docker_image output is empty!" >> $GITHUB_STEP_SUMMARY
+            echo "The deploy-application job may fail." >> $GITHUB_STEP_SUMMARY
+          fi
+
   deploy-application:
     name: Deploy Application
     runs-on: ubuntu-latest
@@ -326,12 +365,23 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
+          # Debug what we received from infrastructure job
+          echo "### Debug: Received from Infrastructure Job"
+          echo "Service Name: '${{ needs.infrastructure.outputs.cloud_run_service }}'"
+          echo "Cloud Run URL: '${{ needs.infrastructure.outputs.cloud_run_url }}'"
+          echo "Docker Image: '${{ needs.infrastructure.outputs.docker_image }}'"
+
           # Use the validated image from infrastructure job instead of raw build output
           IMAGE_TAG="${{ needs.infrastructure.outputs.docker_image }}"
 
-          # Validate that we have an image to deploy
+          # Double-check with explicit test
           if [ -z "${IMAGE_TAG}" ]; then
             echo "❌ Error: No Docker image available for deployment!"
+            echo "IMAGE_TAG variable is empty."
+            echo "Infrastructure outputs:"
+            echo "  - cloud_run_service: ${{ needs.infrastructure.outputs.cloud_run_service }}"
+            echo "  - cloud_run_url: ${{ needs.infrastructure.outputs.cloud_run_url }}"
+            echo "  - docker_image: ${{ needs.infrastructure.outputs.docker_image }}"
             echo "The infrastructure job should have provided a validated image."
             echo "Please check the infrastructure job logs for errors."
             exit 1
