@@ -103,33 +103,84 @@ jobs:
       - name: Build Docker Image
         id: image
         run: |
+          set -e  # Exit on error
+
           IMAGE_BASE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/portfolio-images/portfolio"
           IMAGE_TAG="${IMAGE_BASE}:${{ github.sha }}"
 
+          echo "### 🔨 Building Docker Image" >> $GITHUB_STEP_SUMMARY
           echo "Building Docker image: ${IMAGE_TAG}"
 
+          # Verify Artifact Registry exists
+          if ! gcloud artifacts repositories describe portfolio-images \
+            --location=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} 2>/dev/null; then
+            echo "❌ Artifact Registry 'portfolio-images' not found!"
+            echo "Please run the bootstrap workflow first to create the registry."
+            exit 1
+          fi
+
           # Build with Dockerfile in docker/ directory, context is root
-          docker build \
+          if ! docker build \
             -f docker/Dockerfile \
             -t ${IMAGE_TAG} \
             -t ${IMAGE_BASE}:latest \
-            .
+            . ; then
+            echo "❌ Docker build failed!"
+            exit 1
+          fi
 
-          # Push the images
-          docker push ${IMAGE_TAG}
-          docker push ${IMAGE_BASE}:latest
+          echo "✅ Docker image built successfully"
+
+          # Push the images with retry logic
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Pushing Docker image (attempt $((RETRY_COUNT + 1))/${MAX_RETRIES})..."
+
+            if docker push ${IMAGE_TAG} && docker push ${IMAGE_BASE}:latest; then
+              echo "✅ Docker images pushed successfully"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+                echo "❌ Failed to push Docker image after ${MAX_RETRIES} attempts"
+                exit 1
+              fi
+              echo "⚠️ Push failed, retrying in 5 seconds..."
+              sleep 5
+            fi
+          done
+
+          # Verify the push succeeded
+          if ! gcloud artifacts docker images describe ${IMAGE_TAG} 2>/dev/null; then
+            echo "❌ Image verification failed - image not found in registry after push!"
+            exit 1
+          fi
 
           # Get the image digest for extra verification
-          DIGEST=$(docker inspect ${IMAGE_TAG} --format='{{index .RepoDigests 0}}' | cut -d '@' -f2)
+          DIGEST=$(docker inspect ${IMAGE_TAG} --format='{{index .RepoDigests 0}}' | cut -d '@' -f2 || echo "unknown")
 
-          # Output for other jobs
+          # Output for other jobs - critical for workflow
           echo "tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
 
-          echo "### Docker Image Built" >> $GITHUB_STEP_SUMMARY
+          # Debug output
+          echo "::notice title=Image Tag Output::tag=${IMAGE_TAG}"
+          echo "::notice title=Image Digest::digest=${DIGEST}"
+
+          # Summary
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Docker Image Built and Pushed" >> $GITHUB_STEP_SUMMARY
           echo "- **Image:** \`${IMAGE_TAG}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Digest:** \`${DIGEST}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Also tagged as:** \`latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry:** \`${IMAGE_BASE}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Job Outputs Set:**" >> $GITHUB_STEP_SUMMARY
+          echo "- \`image_tag\`: ${IMAGE_TAG}" >> $GITHUB_STEP_SUMMARY
+          echo "- \`image_digest\`: ${DIGEST}" >> $GITHUB_STEP_SUMMARY
 
   infrastructure:
     name: Deploy Infrastructure
@@ -168,13 +219,69 @@ jobs:
           terraform init \
             -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
+      - name: Validate and Set Docker Image
+        id: docker_image
+        run: |
+          # Debug: Show what we received from build-image job
+          echo "::notice title=Received from build-image::image_tag=${{ needs.build-image.outputs.image_tag }}"
+          echo "::notice title=Received from build-image::image_digest=${{ needs.build-image.outputs.image_digest }}"
+
+          # Get the image from build-image job
+          IMAGE_FROM_BUILD="${{ needs.build-image.outputs.image_tag }}"
+          IMAGE_REGISTRY="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/portfolio-images/portfolio"
+
+          echo "Image from build job: ${IMAGE_FROM_BUILD}"
+          echo "Registry base: ${IMAGE_REGISTRY}"
+
+          # If no image from build job, try to use latest as fallback
+          if [ -z "${IMAGE_FROM_BUILD}" ]; then
+            echo "⚠️ No image tag from build job, checking for existing images..."
+
+            # Check if any image exists in the registry
+            if gcloud artifacts docker images list ${IMAGE_REGISTRY} --limit=1 2>/dev/null | grep -q portfolio; then
+              DOCKER_IMAGE="${IMAGE_REGISTRY}:latest"
+              echo "✅ Using existing image: ${DOCKER_IMAGE}"
+            else
+              echo "❌ No Docker image available. Please run initial-setup workflow first."
+              echo "### ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+              echo "No Docker image found. Please ensure:" >> $GITHUB_STEP_SUMMARY
+              echo "1. The initial-setup workflow has been run successfully" >> $GITHUB_STEP_SUMMARY
+              echo "2. The build-image job completed successfully" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+          else
+            DOCKER_IMAGE="${IMAGE_FROM_BUILD}"
+            echo "✅ Using newly built image: ${DOCKER_IMAGE}"
+          fi
+
+          # Verify the image actually exists
+          IMAGE_NAME=$(echo ${DOCKER_IMAGE} | cut -d':' -f1)
+          IMAGE_TAG=$(echo ${DOCKER_IMAGE} | cut -d':' -f2)
+
+          if gcloud artifacts docker images describe ${IMAGE_NAME}:${IMAGE_TAG} 2>/dev/null; then
+            echo "✅ Image verified in Artifact Registry"
+          else
+            echo "⚠️ Image not found in registry, trying :latest tag..."
+            DOCKER_IMAGE="${IMAGE_NAME}:latest"
+            if gcloud artifacts docker images describe ${DOCKER_IMAGE} 2>/dev/null; then
+              echo "✅ Using :latest tag as fallback"
+            else
+              echo "❌ No valid Docker image found in Artifact Registry"
+              exit 1
+            fi
+          fi
+
+          echo "docker_image=${DOCKER_IMAGE}" >> $GITHUB_OUTPUT
+          echo "### Docker Image for Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** \`${DOCKER_IMAGE}\`" >> $GITHUB_STEP_SUMMARY
+
       - name: Plan Infrastructure
         working-directory: ./terraform/infrastructure
         run: |
-          # Use the image that was just built
-          DOCKER_IMAGE="${{ needs.build-image.outputs.image_tag }}"
+          # Use the validated Docker image
+          DOCKER_IMAGE="${{ steps.docker_image.outputs.docker_image }}"
 
-          echo "Using Docker image: ${DOCKER_IMAGE}"
+          echo "Deploying with Docker image: ${DOCKER_IMAGE}"
 
           terraform plan \
             -var="project_id=${{ env.PROJECT_ID }}" \

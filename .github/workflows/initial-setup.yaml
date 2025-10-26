@@ -133,29 +133,67 @@ jobs:
 
           IMAGE_TAG="${{ inputs.region }}-docker.pkg.dev/${{ inputs.project_id }}/portfolio-images/portfolio"
 
-          echo "Building image: ${IMAGE_TAG}:bootstrap" >> $GITHUB_STEP_SUMMARY
+          echo "Building initial images..." >> $GITHUB_STEP_SUMMARY
 
           # Build with Dockerfile in docker/ directory, context is root
           docker build \
             -f docker/Dockerfile \
             -t ${IMAGE_TAG}:bootstrap \
             -t ${IMAGE_TAG}:latest \
+            -t ${IMAGE_TAG}:${{ github.sha }} \
             .
 
-          echo "Pushing image to Artifact Registry..." >> $GITHUB_STEP_SUMMARY
-          docker push ${IMAGE_TAG}:bootstrap
-          docker push ${IMAGE_TAG}:latest
+          echo "✅ Docker image built successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Pushing images to Artifact Registry..." >> $GITHUB_STEP_SUMMARY
+
+          # Push all tags with retry logic
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Push attempt $((RETRY_COUNT + 1))/${MAX_RETRIES}..."
+
+            if docker push ${IMAGE_TAG}:bootstrap && \
+               docker push ${IMAGE_TAG}:latest && \
+               docker push ${IMAGE_TAG}:${{ github.sha }}; then
+              echo "✅ All images pushed successfully"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+                echo "❌ Failed to push images after ${MAX_RETRIES} attempts"
+                exit 1
+              fi
+              echo "⚠️ Push failed, retrying in 5 seconds..."
+              sleep 5
+            fi
+          done
+
+          # Verify images exist
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Verifying images in registry..." >> $GITHUB_STEP_SUMMARY
+
+          if gcloud artifacts docker images describe ${IMAGE_TAG}:latest && \
+             gcloud artifacts docker images describe ${IMAGE_TAG}:bootstrap && \
+             gcloud artifacts docker images describe ${IMAGE_TAG}:${{ github.sha }}; then
+            echo "✅ All images verified in registry" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Some images may not have been pushed correctly" >> $GITHUB_STEP_SUMMARY
+          fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### ✅ Initial Setup Complete!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The bootstrap image has been created and pushed successfully." >> $GITHUB_STEP_SUMMARY
+          echo "The bootstrap images have been created and pushed successfully." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "1. Run the **Deploy to Cloud Run** workflow to deploy the infrastructure and application" >> $GITHUB_STEP_SUMMARY
-          echo "2. The deployment will use the bootstrap image for the initial Cloud Run service creation" >> $GITHUB_STEP_SUMMARY
+          echo "2. The deployment will use these images for the initial Cloud Run service creation" >> $GITHUB_STEP_SUMMARY
           echo "3. Future deployments will build and use new images automatically" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Image Details:**" >> $GITHUB_STEP_SUMMARY
           echo "- Repository: \`${IMAGE_TAG}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Tags: \`bootstrap\`, \`latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Tags: \`bootstrap\`, \`latest\`, \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The deploy workflow can now use any of these tags for the initial deployment." >> $GITHUB_STEP_SUMMARY
