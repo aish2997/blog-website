@@ -189,6 +189,7 @@ jobs:
     outputs:
       cloud_run_service: ${{ steps.terraform_output.outputs.service_name }}
       cloud_run_url: ${{ steps.terraform_output.outputs.cloud_run_url }}
+      docker_image: ${{ steps.docker_image.outputs.docker_image }}
 
     permissions:
       contents: 'read'
@@ -325,15 +326,28 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          IMAGE_TAG="${{ needs.build-image.outputs.image_tag }}"
+          # Use the validated image from infrastructure job instead of raw build output
+          IMAGE_TAG="${{ needs.infrastructure.outputs.docker_image }}"
 
-          echo "Deploying image: ${IMAGE_TAG}"
+          # Validate that we have an image to deploy
+          if [ -z "${IMAGE_TAG}" ]; then
+            echo "❌ Error: No Docker image available for deployment!"
+            echo "The infrastructure job should have provided a validated image."
+            echo "Please check the infrastructure job logs for errors."
+            exit 1
+          fi
+
+          echo "✅ Deploying image: ${IMAGE_TAG}"
+          echo "Service: ${{ needs.infrastructure.outputs.cloud_run_service }}"
+          echo "Region: ${{ env.REGION }}"
 
           gcloud run deploy ${{ needs.infrastructure.outputs.cloud_run_service }} \
             --image ${IMAGE_TAG} \
             --region ${{ env.REGION }} \
             --platform managed \
             --quiet
+
+          echo "✅ Cloud Run service updated successfully with image: ${IMAGE_TAG}"
 
       # Note: Database migrations now run automatically during Docker image build
       # SQLite database is initialized inside the container
