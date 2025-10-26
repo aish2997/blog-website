@@ -204,7 +204,7 @@ jobs:
     outputs:
       cloud_run_service: ${{ steps.terraform_output.outputs.service_name }}
       cloud_run_url: ${{ steps.terraform_output.outputs.cloud_run_url }}
-      docker_image: ${{ steps.docker_image.outputs.docker_image }}
+      docker_image_tag: ${{ steps.docker_image.outputs.docker_image_tag }}
 
     permissions:
       contents: 'read'
@@ -300,19 +300,25 @@ jobs:
             exit 1
           fi
 
-          # Critical: Set the output for other jobs
-          echo "Setting GitHub output: docker_image=${DOCKER_IMAGE}"
+          # CRITICAL FIX: Extract just the tag part (avoids secret masking issues)
+          # Docker image format: region-docker.pkg.dev/project/repo/image:tag
+          # We only need the tag part (e.g., "latest" or "sha-123456")
+          IMAGE_TAG_ONLY=$(echo "${DOCKER_IMAGE}" | rev | cut -d':' -f1 | rev)
+
+          echo "Full Docker image: ${DOCKER_IMAGE}"
+          echo "Extracted tag only: ${IMAGE_TAG_ONLY}"
+
+          # Pass only the tag, not the full URL (avoids secret masking)
+          echo "docker_image_tag=${IMAGE_TAG_ONLY}" >> $GITHUB_OUTPUT
+
+          # Also pass the full image (might be masked but try anyway)
           echo "docker_image=${DOCKER_IMAGE}" >> $GITHUB_OUTPUT
 
-          # Debug: Verify output was set
-          echo "::notice title=Docker Image Set::docker_image=${DOCKER_IMAGE}"
-          echo "Debug: DOCKER_IMAGE variable = ${DOCKER_IMAGE}"
-          echo "Debug: GITHUB_OUTPUT file contents:"
-          cat $GITHUB_OUTPUT || echo "GITHUB_OUTPUT file not accessible"
-
           echo "### Docker Image for Deployment" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image:** \`${DOCKER_IMAGE}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Output Set:** \`docker_image=${DOCKER_IMAGE}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Full Image:** \`${DOCKER_IMAGE}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag Only:** \`${IMAGE_TAG_ONLY}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Note: Only passing tag '${IMAGE_TAG_ONLY}' to avoid secret masking issues" >> $GITHUB_STEP_SUMMARY
 
       - name: Plan Infrastructure
         working-directory: ./terraform/infrastructure
@@ -345,14 +351,17 @@ jobs:
           echo "### Infrastructure Job Outputs" >> $GITHUB_STEP_SUMMARY
           echo "- **Service Name:** ${{ steps.terraform_output.outputs.service_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Cloud Run URL:** ${{ steps.terraform_output.outputs.cloud_run_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Docker Image:** ${{ steps.docker_image.outputs.docker_image }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker Image Tag:** ${{ steps.docker_image.outputs.docker_image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "These outputs will be passed to the deploy-application job." >> $GITHUB_STEP_SUMMARY
+          echo "The image tag will be used to reconstruct the full URL in deploy-application job." >> $GITHUB_STEP_SUMMARY
+          echo "This avoids GitHub Actions masking issues with secrets in outputs." >> $GITHUB_STEP_SUMMARY
 
           # Final verification
-          if [ -z "${{ steps.docker_image.outputs.docker_image }}" ]; then
-            echo "⚠️ WARNING: docker_image output is empty!" >> $GITHUB_STEP_SUMMARY
-            echo "The deploy-application job may fail." >> $GITHUB_STEP_SUMMARY
+          if [ -z "${{ steps.docker_image.outputs.docker_image_tag }}" ]; then
+            echo "⚠️ WARNING: docker_image_tag output is empty!" >> $GITHUB_STEP_SUMMARY
+            echo "The deploy-application job will fail." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ Image tag '${{ steps.docker_image.outputs.docker_image_tag }}' will be passed to deploy-application" >> $GITHUB_STEP_SUMMARY
           fi
 
   deploy-application:
@@ -379,39 +388,39 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          # Debug what we received from infrastructure job
-          echo "### Debug: Received from Infrastructure Job"
-          echo "Service Name: '${{ needs.infrastructure.outputs.cloud_run_service }}'"
-          echo "Cloud Run URL: '${{ needs.infrastructure.outputs.cloud_run_url }}'"
-          echo "Docker Image: '${{ needs.infrastructure.outputs.docker_image }}'"
+          # Get the image tag from infrastructure job
+          IMAGE_TAG_ONLY="${{ needs.infrastructure.outputs.docker_image_tag }}"
 
-          # Use the validated image from infrastructure job instead of raw build output
-          IMAGE_TAG="${{ needs.infrastructure.outputs.docker_image }}"
+          echo "### Reconstructing Docker Image URL"
+          echo "Received tag from infrastructure: '${IMAGE_TAG_ONLY}'"
+          echo "PROJECT_ID: ${{ env.PROJECT_ID }}"
+          echo "REGION: ${{ env.REGION }}"
 
-          # Double-check with explicit test
-          if [ -z "${IMAGE_TAG}" ]; then
-            echo "❌ Error: No Docker image available for deployment!"
-            echo "IMAGE_TAG variable is empty."
-            echo "Infrastructure outputs:"
-            echo "  - cloud_run_service: ${{ needs.infrastructure.outputs.cloud_run_service }}"
-            echo "  - cloud_run_url: ${{ needs.infrastructure.outputs.cloud_run_url }}"
-            echo "  - docker_image: ${{ needs.infrastructure.outputs.docker_image }}"
-            echo "The infrastructure job should have provided a validated image."
-            echo "Please check the infrastructure job logs for errors."
+          # Validate we have the required components
+          if [ -z "${IMAGE_TAG_ONLY}" ]; then
+            echo "❌ Error: No image tag received from infrastructure job!"
             exit 1
           fi
 
-          echo "✅ Deploying image: ${IMAGE_TAG}"
+          if [ -z "${{ env.PROJECT_ID }}" ] || [ -z "${{ env.REGION }}" ]; then
+            echo "❌ Error: PROJECT_ID or REGION is not set!"
+            exit 1
+          fi
+
+          # Reconstruct the full image URL
+          FULL_IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/portfolio-images/portfolio:${IMAGE_TAG_ONLY}"
+
+          echo "✅ Reconstructed full image URL: ${FULL_IMAGE}"
           echo "Service: ${{ needs.infrastructure.outputs.cloud_run_service }}"
           echo "Region: ${{ env.REGION }}"
 
           gcloud run deploy ${{ needs.infrastructure.outputs.cloud_run_service }} \
-            --image ${IMAGE_TAG} \
+            --image ${FULL_IMAGE} \
             --region ${{ env.REGION }} \
             --platform managed \
             --quiet
 
-          echo "✅ Cloud Run service updated successfully with image: ${IMAGE_TAG}"
+          echo "✅ Cloud Run service updated successfully with image: ${FULL_IMAGE}"
 
       # Note: Database migrations now run automatically during Docker image build
       # SQLite database is initialized inside the container
