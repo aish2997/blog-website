@@ -46,6 +46,15 @@ jobs:
       - name: Setup gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Enable core APIs for Terraform
+        run: |
+          gcloud services enable cloudresourcemanager.googleapis.com \
+            --project=${{ inputs.project_id }}
+          gcloud services enable serviceusage.googleapis.com \
+            --project=${{ inputs.project_id }}
+          gcloud services enable iam.googleapis.com \
+            --project=${{ inputs.project_id }}
+
       - name: Initialize Terraform
         working-directory: ./terraform/bootstrap
         run: terraform init
