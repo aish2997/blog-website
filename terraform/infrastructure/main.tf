@@ -5,10 +5,6 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 5.0"
     }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.5"
-    }
   }
 }
 
@@ -24,116 +20,6 @@ data "google_service_account" "cloud_run" {
 
 data "google_secret_manager_secret" "django_secret_key" {
   secret_id = "django-secret-key"
-}
-
-data "google_secret_manager_secret" "db_password" {
-  secret_id = "db-password"
-}
-
-# VPC for Cloud SQL
-resource "google_compute_network" "vpc" {
-  name                    = "portfolio-vpc-${var.environment}"
-  auto_create_subnetworks = false
-
-  description = "VPC network for portfolio application"
-}
-
-resource "google_compute_subnetwork" "subnet" {
-  name          = "portfolio-subnet-${var.environment}"
-  ip_cidr_range = "10.0.0.0/24"
-  network       = google_compute_network.vpc.id
-  region        = var.region
-
-  private_ip_google_access = true
-}
-
-# VPC Connector for Cloud Run to access Cloud SQL
-resource "google_vpc_access_connector" "connector" {
-  name          = "portfolio-con-${var.environment}"
-  region        = var.region
-  network       = google_compute_network.vpc.name
-  ip_cidr_range = "10.1.0.0/28"
-
-  min_instances = 2
-  max_instances = 3
-}
-
-# Cloud SQL Instance
-resource "google_sql_database_instance" "postgres" {
-  name             = "portfolio-db-${var.environment}"
-  database_version = var.database_version
-  region           = var.region
-
-  settings {
-    tier              = var.database_tier
-    availability_type = "ZONAL"
-
-    backup_configuration {
-      enabled                        = var.database_backup_enabled
-      start_time                     = "02:00"
-      point_in_time_recovery_enabled = var.database_backup_enabled
-      transaction_log_retention_days = var.database_backup_enabled ? 7 : 0
-
-      backup_retention_settings {
-        retained_backups = 7
-        retention_unit   = "COUNT"
-      }
-    }
-
-    ip_configuration {
-      ipv4_enabled                                  = false
-      private_network                               = google_compute_network.vpc.id
-      enable_private_path_for_google_cloud_services = true
-    }
-
-    database_flags {
-      name  = "max_connections"
-      value = "100"
-    }
-
-    insights_config {
-      query_insights_enabled  = true
-      query_string_length     = 1024
-      record_application_tags = true
-      record_client_address   = true
-    }
-  }
-
-  deletion_protection = var.environment == "production"
-
-  depends_on = [google_service_networking_connection.private_vpc_connection]
-}
-
-# Private IP for Cloud SQL
-resource "google_compute_global_address" "private_ip" {
-  name          = "portfolio-db-ip-${var.environment}"
-  purpose       = "VPC_PEERING"
-  address_type  = "INTERNAL"
-  prefix_length = 16
-  network       = google_compute_network.vpc.id
-}
-
-resource "google_service_networking_connection" "private_vpc_connection" {
-  network                 = google_compute_network.vpc.id
-  service                 = "servicenetworking.googleapis.com"
-  reserved_peering_ranges = [google_compute_global_address.private_ip.name]
-}
-
-# Database
-resource "google_sql_database" "database" {
-  name     = "portfolio"
-  instance = google_sql_database_instance.postgres.name
-}
-
-# Database User
-resource "google_sql_user" "user" {
-  name     = "portfolio_user"
-  instance = google_sql_database_instance.postgres.name
-  password = data.google_secret_manager_secret_version.db_password.secret_data
-}
-
-data "google_secret_manager_secret_version" "db_password" {
-  secret = data.google_secret_manager_secret.db_password.id
 }
 
 # Cloud Storage Buckets
@@ -236,16 +122,6 @@ resource "google_cloud_run_service" "portfolio" {
         }
 
         env {
-          name  = "DATABASE_URL"
-          value = "postgresql://${google_sql_user.user.name}:${data.google_secret_manager_secret_version.db_password.secret_data}@/${google_sql_database.database.name}?host=/cloudsql/${google_sql_database_instance.postgres.connection_name}"
-        }
-
-        env {
-          name  = "CLOUD_SQL_CONNECTION_NAME"
-          value = google_sql_database_instance.postgres.connection_name
-        }
-
-        env {
           name  = "GCS_BUCKET_MEDIA"
           value = google_storage_bucket.media.name
         }
@@ -271,8 +147,8 @@ resource "google_cloud_run_service" "portfolio" {
         }
 
         env {
-          name  = "USE_CLOUD_SQL_PROXY"
-          value = "False"
+          name  = "DATABASE_PATH"
+          value = "/app/data/db.sqlite3"
         }
       }
     }
@@ -281,9 +157,6 @@ resource "google_cloud_run_service" "portfolio" {
       annotations = {
         "autoscaling.knative.dev/maxScale"         = tostring(var.cloud_run_max_instances)
         "autoscaling.knative.dev/minScale"         = tostring(var.cloud_run_min_instances)
-        "run.googleapis.com/cloudsql-instances"    = google_sql_database_instance.postgres.connection_name
-        "run.googleapis.com/vpc-access-connector"  = google_vpc_access_connector.connector.id
-        "run.googleapis.com/vpc-access-egress"     = "private-ranges-only"
         "run.googleapis.com/execution-environment" = "gen2"
       }
     }

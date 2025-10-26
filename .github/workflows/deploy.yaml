@@ -22,9 +22,119 @@ env:
   ENVIRONMENT: ${{ github.event.inputs.environment || 'production' }}
 
 jobs:
+  check-prerequisites:
+    name: Validate Prerequisites
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Required Secrets
+        id: check
+        run: |
+          echo "## Checking Prerequisites" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          MISSING_SECRETS=()
+
+          if [ -z "${{ secrets.WIF_PROVIDER }}" ]; then
+            MISSING_SECRETS+=("WIF_PROVIDER")
+          fi
+
+          if [ -z "${{ secrets.WIF_SERVICE_ACCOUNT }}" ]; then
+            MISSING_SECRETS+=("WIF_SERVICE_ACCOUNT")
+          fi
+
+          if [ -z "${{ secrets.TF_STATE_BUCKET }}" ]; then
+            MISSING_SECRETS+=("TF_STATE_BUCKET")
+          fi
+
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            MISSING_SECRETS+=("GCP_PROJECT_ID")
+          fi
+
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "### ❌ Missing Required Secrets" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The following secrets must be configured before deployment:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            for secret in "${MISSING_SECRETS[@]}"; do
+              echo "- \`$secret\`" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Setup Instructions" >> $GITHUB_STEP_SUMMARY
+            echo "1. Run the bootstrap workflow first" >> $GITHUB_STEP_SUMMARY
+            echo "2. Configure the secrets from bootstrap outputs" >> $GITHUB_STEP_SUMMARY
+            echo "3. Run the initial-setup workflow to create the bootstrap image" >> $GITHUB_STEP_SUMMARY
+            echo "4. Then run this deployment workflow" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          echo "### ✅ All Required Secrets Present" >> $GITHUB_STEP_SUMMARY
+          echo "Proceeding with deployment..." >> $GITHUB_STEP_SUMMARY
+
+  build-image:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: check-prerequisites
+    outputs:
+      image_tag: ${{ steps.image.outputs.tag }}
+      image_digest: ${{ steps.image.outputs.digest }}
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build Docker Image
+        id: image
+        run: |
+          IMAGE_BASE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/portfolio-images/portfolio"
+          IMAGE_TAG="${IMAGE_BASE}:${{ github.sha }}"
+
+          echo "Building Docker image: ${IMAGE_TAG}"
+
+          # Build with Dockerfile in docker/ directory, context is root
+          docker build \
+            -f docker/Dockerfile \
+            -t ${IMAGE_TAG} \
+            -t ${IMAGE_BASE}:latest \
+            .
+
+          # Push the images
+          docker push ${IMAGE_TAG}
+          docker push ${IMAGE_BASE}:latest
+
+          # Get the image digest for extra verification
+          DIGEST=$(docker inspect ${IMAGE_TAG} --format='{{index .RepoDigests 0}}' | cut -d '@' -f2)
+
+          # Output for other jobs
+          echo "tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+
+          echo "### Docker Image Built" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** \`${IMAGE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest:** \`${DIGEST}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Also tagged as:** \`latest\`" >> $GITHUB_STEP_SUMMARY
+
   infrastructure:
     name: Deploy Infrastructure
     runs-on: ubuntu-latest
+    needs: build-image
     outputs:
       cloud_run_service: ${{ steps.terraform_output.outputs.service_name }}
       cloud_run_url: ${{ steps.terraform_output.outputs.cloud_run_url }}
@@ -61,8 +171,10 @@ jobs:
       - name: Plan Infrastructure
         working-directory: ./terraform/infrastructure
         run: |
-          # Get the latest image tag or use a placeholder
-          DOCKER_IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/portfolio-images/portfolio:latest"
+          # Use the image that was just built
+          DOCKER_IMAGE="${{ needs.build-image.outputs.image_tag }}"
+
+          echo "Using Docker image: ${DOCKER_IMAGE}"
 
           terraform plan \
             -var="project_id=${{ env.PROJECT_ID }}" \
@@ -82,10 +194,10 @@ jobs:
           echo "service_name=$(terraform output -raw service_name)" >> $GITHUB_OUTPUT
           echo "cloud_run_url=$(terraform output -raw cloud_run_url)" >> $GITHUB_OUTPUT
 
-  build-and-deploy:
-    name: Build and Deploy Application
+  deploy-application:
+    name: Deploy Application
     runs-on: ubuntu-latest
-    needs: infrastructure
+    needs: [build-image, infrastructure]
 
     permissions:
       contents: 'read'
@@ -104,30 +216,11 @@ jobs:
       - name: Setup gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker
-        run: |
-          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
-
-      - name: Build Docker Image
-        run: |
-          IMAGE_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/portfolio-images/portfolio"
-
-          # Build with Dockerfile in docker/ directory, context is root
-          docker build \
-            -f docker/Dockerfile \
-            -t ${IMAGE_TAG}:latest \
-            -t ${IMAGE_TAG}:${{ github.sha }} \
-            .
-
-      - name: Push Docker Image
-        run: |
-          IMAGE_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/portfolio-images/portfolio"
-          docker push ${IMAGE_TAG}:latest
-          docker push ${IMAGE_TAG}:${{ github.sha }}
-
       - name: Deploy to Cloud Run
         run: |
-          IMAGE_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/portfolio-images/portfolio:${{ github.sha }}"
+          IMAGE_TAG="${{ needs.build-image.outputs.image_tag }}"
+
+          echo "Deploying image: ${IMAGE_TAG}"
 
           gcloud run deploy ${{ needs.infrastructure.outputs.cloud_run_service }} \
             --image ${IMAGE_TAG} \
@@ -135,30 +228,8 @@ jobs:
             --platform managed \
             --quiet
 
-      - name: Run Database Migrations
-        run: |
-          # Get Cloud SQL connection name
-          CLOUD_SQL_CONNECTION=$(gcloud sql instances describe portfolio-db-${{ env.ENVIRONMENT }} \
-            --project=${{ env.PROJECT_ID }} \
-            --format="value(connectionName)")
-
-          # Run migrations via Cloud Run Jobs or a one-off container
-          gcloud run jobs create migrate-${{ github.run_number }} \
-            --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/portfolio-images/portfolio:${{ github.sha }} \
-            --region ${{ env.REGION }} \
-            --set-cloudsql-instances=${CLOUD_SQL_CONNECTION} \
-            --command python \
-            --args "manage.py,migrate" \
-            --max-retries 1 \
-            --parallelism 1 \
-            --task-timeout 5m \
-            --service-account ${{ secrets.WIF_SERVICE_ACCOUNT }} \
-            || true
-
-          # Execute the migration job
-          gcloud run jobs execute migrate-${{ github.run_number }} \
-            --region ${{ env.REGION }} \
-            --wait
+      # Note: Database migrations now run automatically during Docker image build
+      # SQLite database is initialized inside the container
 
       - name: Deployment Summary
         run: |
@@ -169,7 +240,7 @@ jobs:
           echo "- **URL:** ${{ needs.infrastructure.outputs.cloud_run_url }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Service:** ${{ needs.infrastructure.outputs.cloud_run_service }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Region:** ${{ env.REGION }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image:** ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/portfolio-images/portfolio:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** ${{ needs.build-image.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Commit" >> $GITHUB_STEP_SUMMARY
           echo "- **SHA:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
@@ -179,7 +250,7 @@ jobs:
   smoke-test:
     name: Smoke Test
     runs-on: ubuntu-latest
-    needs: [infrastructure, build-and-deploy]
+    needs: [infrastructure, deploy-application]
 
     steps:
       - name: Test Application Health

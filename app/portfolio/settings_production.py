@@ -103,32 +103,24 @@ TEMPLATES = [
 WSGI_APPLICATION = 'portfolio.wsgi.application'
 
 # Database
-# Using DATABASE_URL from environment (set by Cloud Run)
-if os.environ.get('DATABASE_URL'):
-    import dj_database_url
-    DATABASES = {
-        'default': dj_database_url.parse(
-            os.environ.get('DATABASE_URL'),
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
-else:
-    # Fallback for local development
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME', 'portfolio'),
-            'USER': os.environ.get('DB_USER', 'portfolio_user'),
-            'PASSWORD': get_secret('db-password'),
-            'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
-            'PORT': os.environ.get('DB_PORT', '5432'),
+# Using SQLite for production (cost-effective for low-traffic portfolio site)
+DATABASE_PATH = os.environ.get('DATABASE_PATH', '/app/data/db.sqlite3')
+
+# Ensure the data directory exists
+import os
+os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': DATABASE_PATH,
+        'OPTIONS': {
+            # SQLite optimizations for better performance
+            'init_command': "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA cache_size=10000; PRAGMA temp_store=MEMORY;",
+            'timeout': 20,
         }
     }
-
-# If using Cloud SQL via proxy
-if os.environ.get('CLOUD_SQL_CONNECTION_NAME') and os.environ.get('USE_CLOUD_SQL_PROXY', 'False').lower() != 'false':
-    DATABASES['default']['HOST'] = f"/cloudsql/{os.environ.get('CLOUD_SQL_CONNECTION_NAME')}"
+}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

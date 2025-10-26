@@ -21,25 +21,6 @@ variable "domain" {
   default     = ""
 }
 
-# Cloud SQL Configuration
-variable "database_tier" {
-  description = "Cloud SQL instance tier"
-  type        = string
-  default     = "db-f1-micro"
-}
-
-variable "database_version" {
-  description = "PostgreSQL version"
-  type        = string
-  default     = "POSTGRES_15"
-}
-
-variable "database_backup_enabled" {
-  description = "Enable automated backups"
-  type        = bool
-  default     = true
-}
-
 # Cloud Run Configuration
 variable "cloud_run_cpu" {
   description = "CPU allocation for Cloud Run"

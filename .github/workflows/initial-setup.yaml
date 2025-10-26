@@ -1,0 +1,157 @@
+name: Initial Setup Helper
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: 'GCP Project ID'
+        required: true
+        type: string
+      region:
+        description: 'GCP Region'
+        required: false
+        default: 'us-central1'
+        type: string
+
+jobs:
+  validate-and-build-initial-image:
+    name: Validate Setup and Build Initial Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for Required Secrets
+        run: |
+          echo "## Checking Prerequisites" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          MISSING_SECRETS=()
+
+          # Check for bootstrap outputs
+          if [ -z "${{ secrets.WIF_PROVIDER }}" ]; then
+            MISSING_SECRETS+=("WIF_PROVIDER")
+          fi
+
+          if [ -z "${{ secrets.WIF_SERVICE_ACCOUNT }}" ]; then
+            MISSING_SECRETS+=("WIF_SERVICE_ACCOUNT")
+          fi
+
+          if [ -z "${{ secrets.TF_STATE_BUCKET }}" ]; then
+            MISSING_SECRETS+=("TF_STATE_BUCKET")
+          fi
+
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            MISSING_SECRETS+=("GCP_PROJECT_ID")
+          fi
+
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "### ❌ Missing Required Secrets" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The following secrets are missing and must be configured:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            for secret in "${MISSING_SECRETS[@]}"; do
+              echo "- \`$secret\`" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📋 Setup Instructions" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "1. **First, run the bootstrap workflow** to create the GCP resources" >> $GITHUB_STEP_SUMMARY
+            echo "2. **Copy the outputs** from the bootstrap workflow" >> $GITHUB_STEP_SUMMARY
+            echo "3. **Configure the repository secrets** in Settings → Secrets and variables → Actions" >> $GITHUB_STEP_SUMMARY
+            echo "4. **Re-run this workflow** to validate and build the initial image" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "For detailed instructions, see the [Bootstrap README](terraform/bootstrap/README.md)" >> $GITHUB_STEP_SUMMARY
+
+            exit 1
+          else
+            echo "### ✅ All Required Secrets Configured" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- WIF_PROVIDER: ✓" >> $GITHUB_STEP_SUMMARY
+            echo "- WIF_SERVICE_ACCOUNT: ✓" >> $GITHUB_STEP_SUMMARY
+            echo "- TF_STATE_BUCKET: ✓" >> $GITHUB_STEP_SUMMARY
+            echo "- GCP_PROJECT_ID: ✓" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Authenticate to Google Cloud
+        if: success()
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud CLI
+        if: success()
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Verify GCP Resources
+        if: success()
+        run: |
+          echo "### Verifying GCP Resources" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          PROJECT_ID="${{ inputs.project_id }}"
+          REGION="${{ inputs.region }}"
+
+          # Check if Artifact Registry exists
+          if gcloud artifacts repositories describe portfolio-images \
+            --location=$REGION \
+            --project=$PROJECT_ID 2>/dev/null; then
+            echo "- ✅ Artifact Registry 'portfolio-images' exists" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ Artifact Registry 'portfolio-images' not found" >> $GITHUB_STEP_SUMMARY
+            echo "  Run the bootstrap workflow first!" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          # Check if State Bucket exists
+          if gsutil ls -b gs://${{ secrets.TF_STATE_BUCKET }} 2>/dev/null; then
+            echo "- ✅ Terraform State Bucket exists" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ Terraform State Bucket not found" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All prerequisites verified successfully!" >> $GITHUB_STEP_SUMMARY
+
+      - name: Configure Docker
+        if: success()
+        run: |
+          gcloud auth configure-docker ${{ inputs.region }}-docker.pkg.dev
+
+      - name: Build and Push Initial Bootstrap Image
+        if: success()
+        run: |
+          echo "### Building Initial Docker Image" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          IMAGE_TAG="${{ inputs.region }}-docker.pkg.dev/${{ inputs.project_id }}/portfolio-images/portfolio"
+
+          echo "Building image: ${IMAGE_TAG}:bootstrap" >> $GITHUB_STEP_SUMMARY
+
+          # Build with Dockerfile in docker/ directory, context is root
+          docker build \
+            -f docker/Dockerfile \
+            -t ${IMAGE_TAG}:bootstrap \
+            -t ${IMAGE_TAG}:latest \
+            .
+
+          echo "Pushing image to Artifact Registry..." >> $GITHUB_STEP_SUMMARY
+          docker push ${IMAGE_TAG}:bootstrap
+          docker push ${IMAGE_TAG}:latest
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Initial Setup Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The bootstrap image has been created and pushed successfully." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Run the **Deploy to Cloud Run** workflow to deploy the infrastructure and application" >> $GITHUB_STEP_SUMMARY
+          echo "2. The deployment will use the bootstrap image for the initial Cloud Run service creation" >> $GITHUB_STEP_SUMMARY
+          echo "3. Future deployments will build and use new images automatically" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Details:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Repository: \`${IMAGE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Tags: \`bootstrap\`, \`latest\`" >> $GITHUB_STEP_SUMMARY
