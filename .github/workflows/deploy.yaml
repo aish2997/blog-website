@@ -238,6 +238,9 @@ jobs:
       - name: Validate and Set Docker Image
         id: docker_image
         run: |
+          # CRITICAL: Initialize DOCKER_IMAGE at top level to avoid scoping issues
+          DOCKER_IMAGE=""
+
           # Debug: Show what we received from build-image job
           echo "::notice title=Received from build-image::image_tag=${{ needs.build-image.outputs.image_tag }}"
           echo "::notice title=Received from build-image::image_digest=${{ needs.build-image.outputs.image_digest }}"
@@ -272,9 +275,9 @@ jobs:
 
           # Verify the image actually exists
           IMAGE_NAME=$(echo ${DOCKER_IMAGE} | cut -d':' -f1)
-          IMAGE_TAG=$(echo ${DOCKER_IMAGE} | cut -d':' -f2)
+          IMAGE_TAG_PART=$(echo ${DOCKER_IMAGE} | cut -d':' -f2)
 
-          if gcloud artifacts docker images describe ${IMAGE_NAME}:${IMAGE_TAG} 2>/dev/null; then
+          if gcloud artifacts docker images describe ${IMAGE_NAME}:${IMAGE_TAG_PART} 2>/dev/null; then
             echo "✅ Image verified in Artifact Registry"
           else
             echo "⚠️ Image not found in registry, trying :latest tag..."
@@ -287,7 +290,18 @@ jobs:
             fi
           fi
 
+          # CRITICAL: Verify DOCKER_IMAGE is not empty before setting output
+          if [ -z "${DOCKER_IMAGE}" ]; then
+            echo "❌ FATAL ERROR: DOCKER_IMAGE variable is empty after all checks!"
+            echo "This should never happen. Debug info:"
+            echo "  IMAGE_FROM_BUILD: '${IMAGE_FROM_BUILD}'"
+            echo "  IMAGE_REGISTRY: '${IMAGE_REGISTRY}'"
+            echo "  IMAGE_NAME: '${IMAGE_NAME}'"
+            exit 1
+          fi
+
           # Critical: Set the output for other jobs
+          echo "Setting GitHub output: docker_image=${DOCKER_IMAGE}"
           echo "docker_image=${DOCKER_IMAGE}" >> $GITHUB_OUTPUT
 
           # Debug: Verify output was set
