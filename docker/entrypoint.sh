@@ -11,6 +11,7 @@ echo "ALLOWED_HOSTS: ${ALLOWED_HOSTS}"
 echo "CLOUD_RUN_SERVICE_URL: ${CLOUD_RUN_SERVICE_URL:-Not set, using wildcard CSRF patterns}"
 echo "GCS_BUCKET_MEDIA: ${GCS_BUCKET_MEDIA}"
 echo "GCS_BUCKET_STATIC: ${GCS_BUCKET_STATIC}"
+echo "K_SERVICE (Cloud Run): ${K_SERVICE:-Not running on Cloud Run}"
 echo "=================================="
 
 # Database path from environment or default

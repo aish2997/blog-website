@@ -192,8 +192,17 @@ MARKDOWNX_MEDIA_PATH = 'markdownx/'
 # Taggit settings
 TAGGIT_CASE_INSENSITIVE = True
 
+# Cloud Run SSL termination handling
+# Cloud Run terminates SSL at the edge and forwards HTTP to the container
+# We need to trust the X-Forwarded-Proto header to detect HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
 # Security settings for production
-SECURE_SSL_REDIRECT = not DEBUG
+# Only redirect to HTTPS if we're in production and NOT on Cloud Run
+# Cloud Run handles SSL termination at the edge
+SECURE_SSL_REDIRECT = not DEBUG and not os.environ.get('K_SERVICE')
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_BROWSER_XSS_FILTER = True
