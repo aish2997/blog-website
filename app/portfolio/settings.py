@@ -57,7 +57,7 @@ INSTALLED_APPS = [
     'markdownify',
     'hitcount',
     'django_extensions',
-    'whitenoise.runserver_nostatic',
+    # Note: whitenoise.runserver_nostatic removed to allow proper admin static files in development
 
     # Our apps
     'apps.core',
@@ -76,6 +76,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'portfolio.middleware.AdminSecurityMiddleware',  # Custom admin security headers
 ]
 
 ROOT_URLCONF = 'portfolio.urls'
@@ -216,11 +217,14 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = env('EMAIL_HOST_USER', default='noreply@example.com')
 
-# Security settings for production
+# Security settings
+# X_FRAME_OPTIONS must be SAMEORIGIN (not DENY) for admin panel to work properly
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+# Additional security settings for production
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = 'DENY'
