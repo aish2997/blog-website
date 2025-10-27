@@ -370,6 +370,28 @@
         .featured-grid {
             grid-template-columns: 1fr;
         }
+
+        /* Fix button spacing on mobile */
+        .hero-cta {
+            padding: 0 1rem;
+            gap: 1rem;
+        }
+
+        .hero-cta .btn {
+            width: 100%;
+            max-width: 280px;
+            padding: 0.875rem 1.5rem;
+            font-size: 1rem;
+            min-height: 48px; /* Touch-friendly size */
+        }
+
+        .section {
+            padding: 3rem 0;
+        }
+
+        .container {
+            padding: 0 1rem;
+        }
     }
 </style>
 {% endblock %}
