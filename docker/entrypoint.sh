@@ -80,23 +80,64 @@ fi
 echo "Checking static files configuration..."
 echo "STATIC_ROOT: /app/staticfiles"
 echo "STATIC_URL: ${STATIC_URL:-/static/}"
+echo "GCS_BUCKET_STATIC: ${GCS_BUCKET_STATIC:-Not set, using WhiteNoise}"
+
+# Ensure staticfiles directory exists with proper permissions
+mkdir -p /app/staticfiles
+chmod 755 /app/staticfiles
+
+# Clear the staticfiles directory first to ensure clean state
+echo "Clearing old static files..."
+rm -rf /app/staticfiles/*
 
 # Always run collectstatic to ensure we have the latest static files
-# The --clear flag ensures old files are removed
 echo "Collecting static files (including Django admin)..."
-python manage.py collectstatic --noinput --clear || {
-    echo "⚠️ WARNING: Failed to collect static files. Admin panel may not render correctly."
-    echo "Checking staticfiles directory..."
-    ls -la /app/staticfiles/ 2>/dev/null || echo "staticfiles directory not found"
-}
+python manage.py collectstatic --noinput --verbosity 2 2>&1 | tee /tmp/collectstatic.log
+
+# Check if collectstatic succeeded
+if [ ${PIPESTATUS[0]} -eq 0 ]; then
+    echo "✅ Static files collected successfully"
+else
+    echo "❌ ERROR: Failed to collect static files. Admin panel will not render correctly."
+    echo "Collectstatic log:"
+    tail -20 /tmp/collectstatic.log
+fi
 
 # Verify admin static files were collected
 if [ -d "/app/staticfiles/admin" ]; then
     echo "✅ Django admin static files found in /app/staticfiles/admin"
     echo "  - CSS files: $(find /app/staticfiles/admin/css -name "*.css" 2>/dev/null | wc -l)"
     echo "  - JS files: $(find /app/staticfiles/admin/js -name "*.js" 2>/dev/null | wc -l)"
+    echo "  - Image files: $(find /app/staticfiles/admin/img -name "*" -type f 2>/dev/null | wc -l)"
+
+    # List some key admin CSS files to verify
+    echo "Key admin CSS files:"
+    ls -la /app/staticfiles/admin/css/base.css 2>/dev/null || echo "  - base.css not found"
+    ls -la /app/staticfiles/admin/css/dashboard.css 2>/dev/null || echo "  - dashboard.css not found"
+    ls -la /app/staticfiles/admin/css/login.css 2>/dev/null || echo "  - login.css not found"
 else
     echo "❌ WARNING: Django admin static files NOT found! Admin panel will not render correctly."
+    echo "Checking if Django admin is installed:"
+    python -c "import django.contrib.admin; print('Django admin module found')" || echo "Django admin module NOT found"
+fi
+
+# Check total number of static files collected
+TOTAL_FILES=$(find /app/staticfiles -type f 2>/dev/null | wc -l)
+echo "Total static files collected: $TOTAL_FILES"
+
+# Verify WhiteNoise can serve static files (only if not using GCS)
+if [ -z "$GCS_BUCKET_STATIC" ]; then
+    echo "Testing WhiteNoise static file serving..."
+    python -c "
+from django.conf import settings
+import os
+
+print('STORAGES config:', settings.STORAGES.get('staticfiles'))
+print('STATIC_ROOT:', settings.STATIC_ROOT)
+print('STATIC_ROOT exists:', os.path.exists(settings.STATIC_ROOT))
+print('Admin static path:', os.path.join(settings.STATIC_ROOT, 'admin'))
+print('Admin static exists:', os.path.exists(os.path.join(settings.STATIC_ROOT, 'admin')))
+" 2>&1 || echo "Could not verify WhiteNoise configuration"
 fi
 
 echo "Initialization complete."

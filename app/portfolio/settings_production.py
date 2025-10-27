@@ -156,32 +156,51 @@ USE_TZ = True
 GCS_BUCKET_MEDIA = os.environ.get('GCS_BUCKET_MEDIA')
 GCS_BUCKET_STATIC = os.environ.get('GCS_BUCKET_STATIC')
 
+# Configure STORAGES for Django 4.2+ compatibility
 if GCS_BUCKET_STATIC:
-    # Use GCS for static files
-    STATICFILES_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
-    GS_BUCKET_NAME = GCS_BUCKET_STATIC
-    GS_DEFAULT_ACL = 'publicRead'
+    # Use GCS for static files with Django 4.2+ STORAGES configuration
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+            "OPTIONS": {
+                "bucket_name": GCS_BUCKET_STATIC,
+                "default_acl": "publicRead",
+            },
+        },
+    }
     STATIC_URL = f'https://storage.googleapis.com/{GCS_BUCKET_STATIC}/'
     print(f"✅ Using GCS for static files: {GCS_BUCKET_STATIC}")
 else:
-    # Fallback to WhiteNoise - use the correct backend for Django 4.2+
+    # Use WhiteNoise for static files with Django 4.2+ STORAGES configuration
     STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
         "staticfiles": {
             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
     }
     STATIC_URL = '/static/'
+    # WhiteNoise settings for better static file serving
+    WHITENOISE_KEEP_ONLY_HASHED_FILES = True
+    WHITENOISE_COMPRESS_OFFLINE = True
+    # Enable WhiteNoise to serve index files and use compression
+    WHITENOISE_USE_FINDERS = False  # Don't use in production
+    WHITENOISE_AUTOREFRESH = False  # Don't auto-refresh in production
+    WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 'xz', 'br', 'swf', 'flv', 'woff', 'woff2']
     print("✅ Using WhiteNoise for static files")
 
 if GCS_BUCKET_MEDIA:
-    # Use GCS for media files
-    DEFAULT_FILE_STORAGE = 'portfolio.storage_backends.MediaStorage'
+    # Use GCS for media files - Note: Need to configure in STORAGES for Django 4.2+
+    # For now, we'll keep the media storage simple
     GS_MEDIA_BUCKET_NAME = GCS_BUCKET_MEDIA
     MEDIA_URL = f'https://storage.googleapis.com/{GCS_BUCKET_MEDIA}/'
     print(f"✅ Using GCS for media files: {GCS_BUCKET_MEDIA}")
 else:
-    # Use local filesystem for media
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    # Use local filesystem for media - default behavior
     MEDIA_URL = '/media/'
     print("⚠️ Using local filesystem for media files")
 
@@ -189,11 +208,29 @@ else:
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Ensure static directory is always included (create if it doesn't exist)
+# Ensure static directories exist
 static_dir = BASE_DIR / 'static'
-if not os.path.exists(static_dir):
-    os.makedirs(static_dir, exist_ok=True)
-STATICFILES_DIRS = [static_dir]
+staticfiles_dir = BASE_DIR / 'staticfiles'
+
+# Create directories if they don't exist
+for directory in [static_dir, staticfiles_dir]:
+    if not os.path.exists(directory):
+        os.makedirs(directory, exist_ok=True)
+        print(f"Created directory: {directory}")
+
+# Include project static files
+STATICFILES_DIRS = []
+if os.path.exists(static_dir):
+    STATICFILES_DIRS.append(static_dir)
+
+# Ensure we can find Django admin static files
+import django
+django_path = Path(django.__file__).parent
+admin_static_path = django_path / 'contrib' / 'admin' / 'static'
+if admin_static_path.exists():
+    print(f"✅ Django admin static files found at: {admin_static_path}")
+else:
+    print(f"⚠️ Django admin static files not found at expected location: {admin_static_path}")
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -53,7 +53,10 @@ USER appuser
 
 # Collect static files during build (including Django admin static files)
 # This ensures admin static files are baked into the image
-RUN python manage.py collectstatic --noinput --clear
+RUN echo "Collecting static files during Docker build..." && \
+    python manage.py collectstatic --noinput --clear --verbosity 2 && \
+    echo "Static files collected. Checking admin files..." && \
+    ls -la /app/staticfiles/admin 2>/dev/null || echo "Admin static files not found during build"
 
 # Note: Database initialization and migrations are now handled by entrypoint.sh at runtime
 # This ensures the database is created in /tmp which is writable in Cloud Run
