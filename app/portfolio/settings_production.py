@@ -15,25 +15,32 @@ env = environ.Env()
 # GCP Project ID
 GCP_PROJECT_ID = os.environ.get('GCP_PROJECT_ID')
 
-# Initialize Secret Manager client
-if GCP_PROJECT_ID:
-    client = secretmanager.SecretManagerServiceClient()
+# SECRET KEY - with multiple fallback mechanisms
+SECRET_KEY = None
 
-    def get_secret(secret_id):
-        """Retrieve secret from GCP Secret Manager"""
-        try:
-            name = f"projects/{GCP_PROJECT_ID}/secrets/{secret_id}/versions/latest"
-            response = client.access_secret_version(request={"name": name})
-            return response.payload.data.decode("UTF-8")
-        except Exception as e:
-            # Fallback to environment variable
-            return os.environ.get(secret_id.upper().replace('-', '_'), '')
-else:
-    def get_secret(secret_id):
-        return os.environ.get(secret_id.upper().replace('-', '_'), '')
+# Try environment variable first
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY') or get_secret('django-secret-key')
+# If not found and we have GCP_PROJECT_ID, try Secret Manager
+if not SECRET_KEY and GCP_PROJECT_ID:
+    try:
+        client = secretmanager.SecretManagerServiceClient()
+        name = f"projects/{GCP_PROJECT_ID}/secrets/django-secret-key/versions/latest"
+        response = client.access_secret_version(request={"name": name})
+        SECRET_KEY = response.payload.data.decode("UTF-8")
+        print(f"✅ Secret key loaded from Secret Manager")
+    except Exception as e:
+        print(f"⚠️ Could not load secret from Secret Manager: {e}")
+
+# Final fallback - generate a key (NOT for production use)
+if not SECRET_KEY:
+    print("❌ WARNING: Using insecure fallback SECRET_KEY. Set SECRET_KEY env var or configure Secret Manager!")
+    SECRET_KEY = 'INSECURE-FALLBACK-KEY-REPLACE-IN-PRODUCTION'
+
+# Validate SECRET_KEY
+if not SECRET_KEY or SECRET_KEY == 'INSECURE-FALLBACK-KEY-REPLACE-IN-PRODUCTION':
+    import warnings
+    warnings.warn("SECRET_KEY is not properly configured!", RuntimeWarning)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
@@ -145,33 +152,39 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images) - Using Google Cloud Storage
-if os.environ.get('GCS_BUCKET_STATIC'):
-    DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
+# Storage Configuration
+GCS_BUCKET_MEDIA = os.environ.get('GCS_BUCKET_MEDIA')
+GCS_BUCKET_STATIC = os.environ.get('GCS_BUCKET_STATIC')
+
+if GCS_BUCKET_STATIC:
+    # Use GCS for static files
     STATICFILES_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
-
-    GS_BUCKET_NAME = os.environ.get('GCS_BUCKET_STATIC')
+    GS_BUCKET_NAME = GCS_BUCKET_STATIC
     GS_DEFAULT_ACL = 'publicRead'
-
-    STATIC_URL = f'https://storage.googleapis.com/{GS_BUCKET_NAME}/'
+    STATIC_URL = f'https://storage.googleapis.com/{GCS_BUCKET_STATIC}/'
+    print(f"✅ Using GCS for static files: {GCS_BUCKET_STATIC}")
 else:
-    # Fallback to WhiteNoise for local serving
-    STATIC_URL = '/static/'
+    # Fallback to WhiteNoise
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    STATIC_URL = '/static/'
+    print("✅ Using WhiteNoise for static files")
 
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static'] if os.path.exists(BASE_DIR / 'static') else []
-
-# Media files - Using Google Cloud Storage
-if os.environ.get('GCS_BUCKET_MEDIA'):
-    GS_MEDIA_BUCKET_NAME = os.environ.get('GCS_BUCKET_MEDIA')
-    MEDIA_URL = f'https://storage.googleapis.com/{GS_MEDIA_BUCKET_NAME}/'
-
-    # Custom storage for media files
+if GCS_BUCKET_MEDIA:
+    # Use GCS for media files
     DEFAULT_FILE_STORAGE = 'portfolio.storage_backends.MediaStorage'
+    GS_MEDIA_BUCKET_NAME = GCS_BUCKET_MEDIA
+    MEDIA_URL = f'https://storage.googleapis.com/{GCS_BUCKET_MEDIA}/'
+    print(f"✅ Using GCS for media files: {GCS_BUCKET_MEDIA}")
 else:
+    # Use local filesystem for media
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
     MEDIA_URL = '/media/'
-    MEDIA_ROOT = BASE_DIR / 'media'
+    print("⚠️ Using local filesystem for media files")
+
+# Always set these regardless of storage backend
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+STATICFILES_DIRS = [BASE_DIR / 'static'] if os.path.exists(BASE_DIR / 'static') else []
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

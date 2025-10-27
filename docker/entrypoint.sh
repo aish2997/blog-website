@@ -14,6 +14,12 @@ echo "GCS_BUCKET_STATIC: ${GCS_BUCKET_STATIC}"
 echo "K_SERVICE (Cloud Run): ${K_SERVICE:-Not running on Cloud Run}"
 echo "=================================="
 
+# Validate Django configuration
+echo "Validating Django configuration..."
+python manage.py check --deploy 2>&1 || {
+    echo "⚠️ Django check reported issues (non-fatal)"
+}
+
 # Database path from environment or default
 DATABASE_PATH=${DATABASE_PATH:-/tmp/db.sqlite3}
 
@@ -106,10 +112,11 @@ fi
 
 # Start the application with gunicorn
 # Using 1 worker for SQLite compatibility (SQLite doesn't handle concurrent writes well)
+# Reduced threads to prevent SQLite lock issues
 exec gunicorn --bind :$PORT \
     --workers 1 \
-    --threads 8 \
-    --timeout 0 \
+    --threads 2 \
+    --timeout 120 \
     --access-logfile - \
     --error-logfile - \
     portfolio.wsgi:application

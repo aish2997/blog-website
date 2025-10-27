@@ -11,6 +11,10 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'portfolio.settings_production')
+# Determine which settings to use
+if os.environ.get('K_SERVICE'):  # Running on Cloud Run
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'portfolio.settings_production')
+else:
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'portfolio.settings')
 
 application = get_wsgi_application()

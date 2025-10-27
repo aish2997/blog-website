@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.generic import TemplateView, View
 from .models import (
     Profile, Skill, Education, WorkExperience,
@@ -88,17 +88,57 @@ class CVDownloadView(View):
     """Handle CV PDF downloads"""
 
     def get(self, request):
-        # Track download
-        cv_download = CVDownload.objects.filter(is_active=True).first()
-        if cv_download and cv_download.file:
+        """Handle CV download with proper storage backend support"""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            cv_download = CVDownload.objects.filter(is_active=True).first()
+
+            if not cv_download or not cv_download.file:
+                # If no CV file, redirect to CV page
+                return redirect('core:cv')
+
+            # Track download
             cv_download.increment_download_count()
 
-            # Return PDF file
-            with open(cv_download.file.path, 'rb') as pdf:
-                response = HttpResponse(pdf.read(), content_type='application/pdf')
+            # Handle both local and cloud storage
+            try:
+                # Try to read the file directly (works for both local and GCS)
+                file_content = cv_download.file.read()
+                response = HttpResponse(file_content, content_type='application/pdf')
                 filename = f"CV_{cv_download.version}.pdf"
                 response['Content-Disposition'] = f'attachment; filename="{filename}"'
                 return response
+            except Exception as e:
+                # If direct read fails, try URL redirect (for GCS public URLs)
+                if hasattr(cv_download.file, 'url'):
+                    return redirect(cv_download.file.url)
+                logger.error(f"Could not access CV file: {e}")
+                return redirect('core:cv')
 
-        # If no CV file, redirect to CV page
-        return redirect('core:cv')
+        except Exception as e:
+            logger.error(f"Error in CVDownloadView: {e}")
+            return redirect('core:cv')
+
+
+class HealthCheckView(View):
+    """Health check endpoint for monitoring"""
+
+    def get(self, request):
+        try:
+            # Test database connection
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+
+            return JsonResponse({
+                'status': 'healthy',
+                'service': 'portfolio',
+                'database': 'connected'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'unhealthy',
+                'error': str(e)
+            }, status=503)
