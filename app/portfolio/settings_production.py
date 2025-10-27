@@ -157,32 +157,47 @@ USE_TZ = True
 GCS_BUCKET_MEDIA = os.environ.get('GCS_BUCKET_MEDIA')
 GCS_BUCKET_STATIC = os.environ.get('GCS_BUCKET_STATIC')
 
+# Configure storage backends using Django 4.2+ STORAGES setting
+# This replaces the deprecated DEFAULT_FILE_STORAGE and STATICFILES_STORAGE settings
+STORAGES = {
+    "staticfiles": {},  # Will be configured below based on GCS_BUCKET_STATIC
+    "default": {},      # Will be configured below based on GCS_BUCKET_MEDIA
+}
+
 if GCS_BUCKET_STATIC:
     # Use GCS for static files
-    STATICFILES_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
-    GS_BUCKET_NAME = GCS_BUCKET_STATIC
-    GS_DEFAULT_ACL = 'publicRead'
+    STORAGES["staticfiles"] = {
+        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+        "OPTIONS": {
+            "bucket_name": GCS_BUCKET_STATIC,
+            "default_acl": "publicRead",
+        }
+    }
     STATIC_URL = f'https://storage.googleapis.com/{GCS_BUCKET_STATIC}/'
     print(f"✅ Using GCS for static files: {GCS_BUCKET_STATIC}")
 else:
-    # Fallback to WhiteNoise - use the correct backend for Django 4.2+
-    STORAGES = {
-        "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-        },
+    # Fallback to WhiteNoise for static files
+    STORAGES["staticfiles"] = {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     }
     STATIC_URL = '/static/'
     print("✅ Using WhiteNoise for static files")
 
 if GCS_BUCKET_MEDIA:
     # Use GCS for media files
-    DEFAULT_FILE_STORAGE = 'portfolio.storage_backends.MediaStorage'
-    GS_MEDIA_BUCKET_NAME = GCS_BUCKET_MEDIA
+    STORAGES["default"] = {
+        "BACKEND": "portfolio.storage_backends.MediaStorage",
+        "OPTIONS": {
+            "bucket_name": GCS_BUCKET_MEDIA,
+        }
+    }
     MEDIA_URL = f'https://storage.googleapis.com/{GCS_BUCKET_MEDIA}/'
     print(f"✅ Using GCS for media files: {GCS_BUCKET_MEDIA}")
 else:
-    # Use local filesystem for media
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    # Use local filesystem for media files
+    STORAGES["default"] = {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    }
     MEDIA_URL = '/media/'
     print("⚠️ Using local filesystem for media files")
 
