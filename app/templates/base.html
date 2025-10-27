@@ -95,6 +95,7 @@
             transition: var(--transition);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
+            padding-top: env(safe-area-inset-top);
         }
 
         header.scrolled {
@@ -210,6 +211,34 @@
             transition: var(--transition);
         }
 
+        /* Navigation Close Button */
+        .nav-close-btn {
+            display: none;
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 48px;
+            height: 48px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            color: var(--text-primary);
+        }
+
+        .nav-close-btn:hover {
+            background: var(--bg-primary);
+            border-color: var(--text-primary);
+        }
+
+        .nav-close-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
         /* Main Content */
         main {
             min-height: 100vh;
@@ -251,6 +280,7 @@
         .btn {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 0.5rem;
             padding: 0.625rem 1.25rem;
             background: var(--accent);
@@ -276,9 +306,21 @@
         }
 
         .btn-outline {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
             background: transparent;
             color: var(--text-primary);
+            text-decoration: none;
+            border-radius: var(--radius);
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: var(--transition);
             border: 2px solid var(--border);
+            cursor: pointer;
+            letter-spacing: -0.01em;
         }
 
         .btn-outline:hover {
@@ -465,12 +507,18 @@
                 justify-content: space-between;
                 align-items: center;
                 padding: 1rem 0;
+                position: relative;
             }
 
             .logo {
                 position: absolute;
                 left: 50%;
                 transform: translateX(-50%);
+                text-align: center;
+                max-width: 60%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             }
 
             nav {
@@ -496,6 +544,10 @@
                 left: 0;
             }
 
+            .nav-close-btn {
+                display: flex;
+            }
+
             nav a {
                 padding: 0.75rem 1rem;
                 border-radius: var(--radius);
@@ -516,10 +568,10 @@
             }
 
             .theme-toggle {
-                position: relative;
-                right: auto;
-                top: auto;
-                transform: none;
+                position: absolute;
+                right: 1rem;
+                top: 50%;
+                transform: translateY(-50%);
             }
 
             /* Hamburger to X animation */
@@ -539,6 +591,12 @@
             .btn, .btn-outline {
                 min-height: 44px; /* iOS touch target recommendation */
                 touch-action: manipulation; /* Prevent double-tap zoom */
+                -webkit-tap-highlight-color: transparent; /* Remove tap highlight */
+            }
+
+            /* Remove tap highlight on all interactive elements */
+            button, a, .mobile-menu-toggle, .theme-toggle, .nav-close-btn {
+                -webkit-tap-highlight-color: transparent;
             }
 
             /* Ensure proper spacing for all containers on mobile */
@@ -577,6 +635,11 @@
                 <a href="/" class="logo">{{ SITE_NAME|default:"Aishwarya Bhargava" }}</a>
 
                 <nav id="navigation">
+                    <button class="nav-close-btn" onclick="toggleMobileMenu()" aria-label="Close menu">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
                     <a href="/" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Home</a>
                     <a href="{% url 'blog:list' %}" class="{% if 'blog' in request.resolver_match.namespace %}active{% endif %}">Blog</a>
                     <a href="/projects/" class="{% if 'projects' in request.path %}active{% endif %}">Projects</a>

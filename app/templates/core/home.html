@@ -79,7 +79,7 @@
 
     .hero-stats {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
         gap: 2rem;
         max-width: 600px;
         margin: 4rem auto 0;
@@ -385,12 +385,36 @@
             min-height: 48px; /* Touch-friendly size */
         }
 
+        /* Fix stats overflow on mobile */
+        .hero-stats {
+            gap: 1.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+        }
+
         .section {
             padding: 3rem 0;
         }
 
         .container {
             padding: 0 1rem;
+        }
+    }
+
+    /* Specific adjustments for iPhone-sized screens */
+    @media (max-width: 450px) {
+        .hero-stats {
+            gap: 1rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
         }
     }
 </style>
