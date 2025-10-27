@@ -1,3 +1,4 @@
+# Simple Dockerfile for debugging - no GCS sync
 # Multi-stage build for optimized production image
 FROM python:3.9-slim as builder
 
@@ -27,8 +28,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DJANGO_SETTINGS_MODULE=portfolio.settings_production \
     DATABASE_PATH=/tmp/db.sqlite3
 
-# No runtime dependencies needed for SQLite (it's built-in)
-
 # Copy Python packages from builder
 COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
@@ -39,8 +38,8 @@ WORKDIR /app
 # Copy only the application code
 COPY app/ .
 
-# Copy entrypoint script
-COPY docker/entrypoint.sh /app/entrypoint.sh
+# Copy simple entrypoint script
+COPY docker/entrypoint-simple.sh /app/entrypoint.sh
 
 # Create a non-root user to run the app
 RUN useradd -m -u 1000 appuser && \
@@ -50,8 +49,5 @@ RUN useradd -m -u 1000 appuser && \
 
 USER appuser
 
-# Note: Database initialization and migrations are now handled by entrypoint.sh at runtime
-# This ensures the database is created in /tmp which is writable in Cloud Run
-
-# Run the application using the entrypoint script
+# Run the application using the simple entrypoint script
 ENTRYPOINT ["/app/entrypoint.sh"]

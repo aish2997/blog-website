@@ -1,15 +1,17 @@
 #!/bin/bash
-set -e
+# Remove set -e to prevent script from exiting on first error
 
 echo "Starting Django application initialization..."
 
 # Database path from environment or default
 DATABASE_PATH=${DATABASE_PATH:-/tmp/db.sqlite3}
 
-# Try to restore database from GCS first
+# Try to restore database from GCS first (if configured)
 if [ -n "$GCS_BUCKET_MEDIA" ]; then
     echo "Attempting to restore database from GCS..."
-    python manage.py sync_database --action restore || echo "Database restore skipped or failed"
+    python manage.py sync_database --action restore 2>&1 || {
+        echo "Warning: Database restore failed or skipped (this is normal on first deployment)"
+    }
 fi
 
 # Check if database exists after restore attempt
@@ -37,7 +39,9 @@ else:
     # Backup the newly created database to GCS
     if [ -n "$GCS_BUCKET_MEDIA" ]; then
         echo "Backing up new database to GCS..."
-        python manage.py sync_database --action backup --force || echo "Initial backup failed"
+        python manage.py sync_database --action backup --force 2>&1 || {
+            echo "Warning: Initial backup failed (check GCS permissions)"
+        }
     fi
 else
     echo "Database found at $DATABASE_PATH"
@@ -49,7 +53,9 @@ else
     # Backup database after migrations
     if [ -n "$GCS_BUCKET_MEDIA" ]; then
         echo "Backing up database to GCS after migrations..."
-        python manage.py sync_database --action backup || echo "Post-migration backup skipped"
+        python manage.py sync_database --action backup 2>&1 || {
+            echo "Warning: Post-migration backup skipped"
+        }
     fi
 fi
 
@@ -62,6 +68,9 @@ else
 fi
 
 echo "Initialization complete."
+
+# Initialize BACKUP_PID as empty
+BACKUP_PID=""
 
 # Start periodic database backup in background (every 30 minutes)
 if [ -n "$GCS_BUCKET_MEDIA" ]; then
@@ -79,12 +88,15 @@ fi
 
 echo "Starting Gunicorn..."
 
-# Trap signals to ensure backup process is cleaned up
-trap "kill $BACKUP_PID 2>/dev/null" EXIT
+# Trap signals to ensure backup process is cleaned up (if it exists)
+if [ -n "$BACKUP_PID" ]; then
+    trap "kill $BACKUP_PID 2>/dev/null" EXIT
+fi
 
 # Start the application with gunicorn
+# Using 1 worker for SQLite compatibility (SQLite doesn't handle concurrent writes well)
 exec gunicorn --bind :$PORT \
-    --workers 2 \
+    --workers 1 \
     --threads 8 \
     --timeout 0 \
     --access-logfile - \
