@@ -38,23 +38,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY') or get_secret('django-secret-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-# Allow Cloud Run domains and any custom domains
-ALLOWED_HOSTS_ENV = os.environ.get('ALLOWED_HOSTS', '')
-if ALLOWED_HOSTS_ENV:
-    ALLOWED_HOSTS = ALLOWED_HOSTS_ENV.split(',')
-else:
-    # Default to allowing Cloud Run domains
-    ALLOWED_HOSTS = [
-        '.run.app',  # All Cloud Run domains
-        '.europe-west1.run.app',  # Specific region
-        '.us-central1.run.app',   # Another common region
-        'localhost',
-        '127.0.0.1',
-    ]
-
-# Add any custom domain if provided
-if os.environ.get('CUSTOM_DOMAIN'):
-    ALLOWED_HOSTS.append(os.environ.get('CUSTOM_DOMAIN'))
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -209,43 +193,20 @@ MARKDOWNX_MEDIA_PATH = 'markdownx/'
 TAGGIT_CASE_INSENSITIVE = True
 
 # Security settings for production
-# Cloud Run handles SSL termination at the load balancer level
-# The connection from load balancer to container is HTTP, so we must not redirect
-SECURE_SSL_REDIRECT = False
-
-# Tell Django to trust the X-Forwarded-Proto header from Cloud Run's proxy
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-USE_X_FORWARDED_HOST = True
-USE_X_FORWARDED_PORT = True
-
-# Keep cookies secure since the user connection is HTTPS
+SECURE_SSL_REDIRECT = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
-
-# Other security settings
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
-
-# HSTS headers - Cloud Run supports these
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
 
 # CSRF settings for Cloud Run
-CSRF_TRUSTED_ORIGINS = [
-    'https://*.run.app',  # All Cloud Run domains
-    'https://*.europe-west1.run.app',
-    'https://*.us-central1.run.app',
-    'https://*.ew.run.app',  # Short region codes
-    'https://*.uc.run.app',
-]
-
-# Add specific Cloud Run service URL if provided
+CSRF_TRUSTED_ORIGINS = []
 if os.environ.get('CLOUD_RUN_SERVICE_URL'):
     CSRF_TRUSTED_ORIGINS.append(os.environ.get('CLOUD_RUN_SERVICE_URL'))
-
-# Add custom domain if provided
 if os.environ.get('CUSTOM_DOMAIN'):
     CSRF_TRUSTED_ORIGINS.append(f"https://{os.environ.get('CUSTOM_DOMAIN')}")
 

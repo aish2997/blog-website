@@ -451,31 +451,23 @@ jobs:
         run: |
           URL="${{ needs.infrastructure.outputs.cloud_run_url }}"
           echo "Testing application at ${URL}"
-          echo ""
 
-          # Test homepage - use -L to follow redirects, -f to fail on HTTP errors
-          echo "Testing homepage..."
-          if curl -L -f -s -o /dev/null -w "HTTP Status: %{http_code}\n" ${URL}; then
-            echo "✅ Homepage is accessible"
+          # Test homepage
+          response=$(curl -s -o /dev/null -w "%{http_code}" ${URL})
+          if [ $response -eq 200 ]; then
+            echo "✅ Homepage is accessible (HTTP ${response})"
           else
-            echo "❌ Homepage test failed"
-            # Show more details for debugging
-            curl -L -I ${URL}
+            echo "❌ Homepage returned HTTP ${response}"
             exit 1
           fi
 
-          echo ""
-          echo "Testing admin page..."
-          # Test admin page - it's normal for admin to redirect to login (302)
-          admin_response=$(curl -L -s -o /dev/null -w "%{http_code}" ${URL}/admin/)
-          if [ $admin_response -eq 200 ] || [ $admin_response -eq 302 ] || [ $admin_response -eq 301 ]; then
+          # Test admin page
+          admin_response=$(curl -s -o /dev/null -w "%{http_code}" ${URL}/admin/)
+          if [ $admin_response -eq 200 ] || [ $admin_response -eq 302 ]; then
             echo "✅ Admin page is accessible (HTTP ${admin_response})"
           else
-            echo "❌ Admin page returned unexpected status: HTTP ${admin_response}"
-            # Show more details for debugging
-            curl -L -I ${URL}/admin/
+            echo "❌ Admin page returned HTTP ${admin_response}"
             exit 1
           fi
 
-          echo ""
           echo "All smoke tests passed! ✅"
