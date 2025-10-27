@@ -123,9 +123,9 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': DATABASE_PATH,
         'OPTIONS': {
-            # SQLite optimizations for better performance
-            'init_command': "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA cache_size=10000; PRAGMA temp_store=MEMORY;",
+            # SQLite timeout setting
             'timeout': 20,
+            # Note: PRAGMA optimizations are applied via signal in apps.core.apps
         }
     }
 }

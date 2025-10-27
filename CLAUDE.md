@@ -117,8 +117,12 @@ The project follows a modular app-based architecture under the `app/apps/` direc
 
 ### Key Technical Decisions
 
-- **Database**: SQLite for development, PostgreSQL (Cloud SQL) for production
-- **Media Storage**: Local filesystem in development, Google Cloud Storage in production
+- **Database**: SQLite for both development and production (cost-effective for portfolio site)
+  - Production uses `/tmp/db.sqlite3` (the only writable directory in Cloud Run)
+  - SQLite optimizations applied via Django signal in `apps.core.apps` (WAL mode, increased cache, etc.)
+  - Database is synced to/from GCS for persistence across container restarts
+  - Single Gunicorn worker configured to avoid SQLite concurrency issues
+- **Media Storage**: Local filesystem in development, Google Cloud Storage in production (optional)
 - **Static Files**: Served via WhiteNoise middleware with compression
 - **Markdown Processing**: markdownx for editing, markdownify for rendering
 - **Authentication**: Django's built-in auth system
@@ -141,11 +145,13 @@ The project uses django-environ for configuration management. Key settings:
 - Production: Uses `app/portfolio/settings_production.py` module with Secret Manager integration
 
 Required environment variables:
-- `SECRET_KEY` - Django secret key
+- `SECRET_KEY` - Django secret key (or uses Secret Manager if GCP_PROJECT_ID is set)
 - `DEBUG` - Debug mode (True/False)
 - `ALLOWED_HOSTS` - Comma-separated list of allowed hosts
-- `DATABASE_URL` - Database connection string (production)
-- `GCS_BUCKET_NAME` - Google Cloud Storage bucket (production)
+- `DATABASE_PATH` - Path to SQLite database (defaults to /tmp/db.sqlite3 in production)
+- `GCS_BUCKET_MEDIA` - Google Cloud Storage bucket for media files (optional)
+- `GCS_BUCKET_STATIC` - Google Cloud Storage bucket for static files (optional)
+- `GCP_PROJECT_ID` - GCP project ID for Secret Manager integration (optional)
 
 ### Model Relationships
 
