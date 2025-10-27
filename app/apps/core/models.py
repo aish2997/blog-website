@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from apps.core.security.validators import ImageFileValidator, PDFFileValidator
 
 
 class Profile(models.Model):
@@ -10,7 +11,13 @@ class Profile(models.Model):
     title = models.CharField(max_length=200, help_text="e.g., Full Stack Developer")
     bio = models.TextField(help_text="Short bio for homepage")
     about_me = models.TextField(help_text="Detailed about section")
-    profile_image = models.ImageField(upload_to='profile/', blank=True, null=True)
+    profile_image = models.ImageField(
+        upload_to='profile/',
+        blank=True,
+        null=True,
+        validators=[ImageFileValidator(max_size=3*1024*1024, max_width=1500, max_height=1500)],
+        help_text="Max size: 3MB, Max dimensions: 1500x1500px"
+    )
 
     # Social links
     github_url = models.URLField(blank=True)
@@ -100,7 +107,13 @@ class WorkExperience(models.Model):
     is_current = models.BooleanField(default=False)
     description = models.TextField(help_text="Job responsibilities and achievements (supports Markdown)")
     technologies_used = models.CharField(max_length=500, blank=True, help_text="Comma-separated list")
-    company_logo = models.ImageField(upload_to='companies/', blank=True, null=True)
+    company_logo = models.ImageField(
+        upload_to='companies/',
+        blank=True,
+        null=True,
+        validators=[ImageFileValidator(max_size=2*1024*1024, max_width=500, max_height=500)],
+        help_text="Max size: 2MB, Max dimensions: 500x500px"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -159,7 +172,11 @@ class Achievement(models.Model):
 
 class CVDownload(models.Model):
     """Track CV downloads and views"""
-    file = models.FileField(upload_to='cv/', help_text="Upload your CV in PDF format")
+    file = models.FileField(
+        upload_to='cv/',
+        validators=[PDFFileValidator(max_size=10*1024*1024)],
+        help_text="Upload your CV in PDF format (Max size: 10MB)"
+    )
     version = models.CharField(max_length=20, default="1.0")
     is_active = models.BooleanField(default=True)
     view_count = models.PositiveIntegerField(default=0)

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import environ
 from google.cloud import secretmanager
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -32,20 +33,40 @@ if not SECRET_KEY and GCP_PROJECT_ID:
     except Exception as e:
         print(f"⚠️ Could not load secret from Secret Manager: {e}")
 
-# Final fallback - generate a key (NOT for production use)
+# No fallback - fail fast if SECRET_KEY is not configured
 if not SECRET_KEY:
-    print("❌ WARNING: Using insecure fallback SECRET_KEY. Set SECRET_KEY env var or configure Secret Manager!")
-    SECRET_KEY = 'INSECURE-FALLBACK-KEY-REPLACE-IN-PRODUCTION'
-
-# Validate SECRET_KEY
-if not SECRET_KEY or SECRET_KEY == 'INSECURE-FALLBACK-KEY-REPLACE-IN-PRODUCTION':
-    import warnings
-    warnings.warn("SECRET_KEY is not properly configured!", RuntimeWarning)
+    raise ImproperlyConfigured(
+        "SECRET_KEY must be set in production! "
+        "Set the SECRET_KEY environment variable or configure Google Cloud Secret Manager."
+    )
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+# ALLOWED_HOSTS must be explicitly set - no wildcards in production
+ALLOWED_HOSTS_STR = os.environ.get('ALLOWED_HOSTS', '')
+if not ALLOWED_HOSTS_STR:
+    # In Cloud Run, we can get the service URL
+    cloud_run_service = os.environ.get('K_SERVICE')
+    cloud_run_region = os.environ.get('K_CONFIGURATION')
+    if cloud_run_service:
+        # Auto-configure for Cloud Run if no explicit hosts set
+        ALLOWED_HOSTS = [
+            f'{cloud_run_service}-*.run.app',
+            f'{cloud_run_service}-*.a.run.app',
+            'localhost',  # For health checks
+            '127.0.0.1',
+        ]
+        print(f"⚠️ Auto-configured ALLOWED_HOSTS for Cloud Run service: {cloud_run_service}")
+    else:
+        raise ImproperlyConfigured(
+            "ALLOWED_HOSTS must be explicitly set in production! "
+            "Set the ALLOWED_HOSTS environment variable with comma-separated hostnames."
+        )
+else:
+    ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
+    if not ALLOWED_HOSTS:
+        raise ImproperlyConfigured("ALLOWED_HOSTS cannot be empty in production!")
 
 # Application definition
 INSTALLED_APPS = [
@@ -77,8 +98,20 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # Django Security Middleware (must be first)
     'django.middleware.security.SecurityMiddleware',
+
+    # WhiteNoise for static files
     'whitenoise.middleware.WhiteNoiseMiddleware',
+
+    # Custom Security Middleware
+    'apps.core.security.middleware.SecurityHeadersMiddleware',
+    'apps.core.security.middleware.RateLimitMiddleware',
+    'apps.core.security.middleware.SessionSecurityMiddleware',
+    'apps.core.security.middleware.AdminProtectionMiddleware',
+    'apps.core.security.middleware.RequestLoggingMiddleware',
+
+    # Django Core Middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -198,7 +231,7 @@ STATICFILES_DIRS = [static_dir]
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Markdown settings
+# Markdown settings with strict XSS protection
 MARKDOWNX_MARKDOWN_EXTENSIONS = [
     'markdown.extensions.fenced_code',
     'markdown.extensions.codehilite',
@@ -210,6 +243,48 @@ MARKDOWNX_MARKDOWN_EXTENSIONS = [
 MARKDOWNX_EDITOR_RESIZABLE = True
 MARKDOWNX_IMAGE_MAX_SIZE = {'size': (800, 0), 'quality': 90}
 MARKDOWNX_MEDIA_PATH = 'markdownx/'
+
+# Markdownify settings for XSS prevention with bleach
+MARKDOWNIFY = {
+    "default": {
+        # Whitelist only safe HTML tags
+        "WHITELIST_TAGS": [
+            'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'ul', 'ol', 'li', 'code', 'pre', 'blockquote',
+            'a', 'strong', 'em', 'hr', 'br', 'table', 'thead',
+            'tbody', 'tr', 'th', 'td', 'img', 'span', 'div',
+            'sup', 'sub', 'del', 'ins', 'mark', 'abbr'
+        ],
+        # Whitelist only safe attributes
+        "WHITELIST_ATTRS": {
+            'a': ['href', 'title', 'rel'],
+            'img': ['src', 'alt', 'title', 'width', 'height'],
+            'code': ['class'],  # For syntax highlighting
+            'pre': ['class'],
+            'span': ['class'],  # For inline code
+            'div': ['class'],  # For code blocks
+        },
+        # Whitelist only safe protocols
+        "WHITELIST_PROTOCOLS": [
+            'http', 'https', 'mailto', 'ftp'
+        ],
+        # Enable bleach for HTML sanitization
+        "BLEACH": True,
+        # Strip all comments
+        "STRIP_COMMENTS": True,
+        # Additional markdown extensions
+        "MARKDOWN_EXTENSIONS": [
+            'markdown.extensions.fenced_code',
+            'markdown.extensions.codehilite',
+            'markdown.extensions.tables',
+            'markdown.extensions.nl2br',
+            'markdown.extensions.toc',
+        ],
+        # Link handling - add rel="noopener noreferrer" to external links
+        "LINKIFY_PARSE_EMAIL": False,  # Don't auto-link emails
+        "LINKIFY_SKIP_TAGS": ['pre', 'code'],  # Don't linkify inside code blocks
+    }
+}
 
 # Taggit settings
 TAGGIT_CASE_INSENSITIVE = True
@@ -225,14 +300,57 @@ USE_X_FORWARDED_PORT = True
 # Only redirect to HTTPS if we're in production and NOT on Cloud Run
 # Cloud Run handles SSL termination at the edge
 SECURE_SSL_REDIRECT = not DEBUG and not os.environ.get('K_SERVICE')
+
+# Session security
 SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookies
+SESSION_COOKIE_SAMESITE = 'Strict'  # CSRF protection
+SESSION_COOKIE_NAME = 'portfolio_sessionid'  # Custom name to avoid defaults
+SESSION_COOKIE_AGE = 86400  # 24 hours (86400 seconds)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = True  # Update session expiry on each request
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database sessions
+
+# CSRF Protection
 CSRF_COOKIE_SECURE = not DEBUG
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
-SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+CSRF_COOKIE_HTTPONLY = True  # Prevent JavaScript access to CSRF token
+CSRF_COOKIE_SAMESITE = 'Strict'  # Additional CSRF protection
+CSRF_COOKIE_NAME = 'portfolio_csrftoken'  # Custom name
+CSRF_FAILURE_VIEW = 'apps.core.views.csrf_failure'  # Custom CSRF failure page
+CSRF_USE_SESSIONS = False  # Use cookies for CSRF tokens (more secure for our use case)
+
+# Security Headers
+SECURE_BROWSER_XSS_FILTER = True  # Enable browser's XSS filter (deprecated but harmless)
+SECURE_CONTENT_TYPE_NOSNIFF = True  # Prevent MIME sniffing
+X_FRAME_OPTIONS = 'DENY'  # Prevent clickjacking
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'  # Control referrer information
+
+# HSTS (HTTP Strict Transport Security)
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
+
+# Additional Security Headers (requires custom middleware)
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'  # COOP header
+SECURE_CROSS_ORIGIN_EMBEDDER_POLICY = 'require-corp'  # COEP header
+SECURE_CROSS_ORIGIN_RESOURCE_POLICY = 'same-site'  # CORP header
+
+# Permissions Policy (Feature Policy replacement)
+PERMISSIONS_POLICY = {
+    'geolocation': 'none',
+    'camera': 'none',
+    'microphone': 'none',
+    'payment': 'none',
+    'usb': 'none',
+    'magnetometer': 'none',
+    'gyroscope': 'none',
+    'accelerometer': 'none',
+    'ambient-light-sensor': 'none',
+    'autoplay': 'self',
+    'encrypted-media': 'self',
+    'picture-in-picture': 'self',
+    'fullscreen': 'self',
+}
 
 # CSRF settings for Cloud Run
 CSRF_TRUSTED_ORIGINS = []
@@ -293,6 +411,43 @@ SITE_CONFIG = {
     'email': os.environ.get('EMAIL_CONTACT', ''),
     'profile_image': os.environ.get('PROFILE_IMAGE_PATH', 'profile.jpg'),
 }
+
+# Security Settings for custom middleware
+RATELIMIT_ENABLED = not DEBUG
+RATELIMIT_RATE = 100  # requests per minute
+RATELIMIT_BLOCK_DURATION = 300  # 5 minutes
+
+# Honeypot settings
+HONEYPOT_ENABLED = not DEBUG
+HONEYPOT_FIELD_NAME = 'website'  # Field name for honeypot
+
+# Security logging
+SECURITY_REQUEST_LOGGING = not DEBUG
+
+# Admin protection
+ADMIN_MAX_LOGIN_ATTEMPTS = 5
+ADMIN_LOCKOUT_DURATION = 1800  # 30 minutes
+
+# File upload settings
+FILE_UPLOAD_PERMISSIONS = 0o644
+FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB
+
+# Password hashers (use Argon2 for better security)
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+]
+
+# Login security
+LOGIN_URL = '/admin/login/'
+LOGIN_REDIRECT_URL = '/admin/'
+LOGOUT_REDIRECT_URL = '/'
+ACCOUNT_LOCKOUT_THRESHOLD = 5
+ACCOUNT_LOCKOUT_DURATION = 1800  # 30 minutes
 
 # Email configuration
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

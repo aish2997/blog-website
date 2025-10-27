@@ -3,8 +3,11 @@ from django.views.generic import ListView, DetailView
 from django.contrib.contenttypes.models import ContentType
 from django.contrib import messages
 from django.db.models import Q
+from django.utils.decorators import method_decorator
 from .models import BlogPost, Category
 from apps.comments.models import Comment
+from apps.core.security.decorators import rate_limit, honeypot
+from apps.core.security.utils import sanitize_text, sanitize_email
 
 
 class BlogListView(ListView):
@@ -97,17 +100,28 @@ class BlogDetailView(DetailView):
 
         return context
 
+    @method_decorator(rate_limit(key='ip', rate='5/m', method='POST'))
+    @method_decorator(honeypot(field_name='website'))  # Hidden field to catch bots
     def post(self, request, *args, **kwargs):
-        """Handle comment submission"""
+        """Handle comment submission with rate limiting and bot protection"""
         self.object = self.get_object()
 
-        # Get form data
-        author_name = request.POST.get('author_name', '').strip()
-        author_email = request.POST.get('author_email', '').strip()
-        content = request.POST.get('content', '').strip()
+        # Get and sanitize form data
+        author_name = sanitize_text(request.POST.get('author_name', '').strip(), max_length=100)
+        author_email = sanitize_email(request.POST.get('author_email', '').strip())
+        content = sanitize_text(request.POST.get('content', '').strip(), max_length=5000)
 
         # Validate required fields
         if author_name and author_email and content:
+            # Additional validation: check content length
+            if len(content) < 10:
+                messages.error(request, 'Comment must be at least 10 characters long.')
+                return redirect('blog:detail', slug=self.object.slug)
+
+            if len(content) > 5000:
+                messages.error(request, 'Comment must not exceed 5000 characters.')
+                return redirect('blog:detail', slug=self.object.slug)
+
             # Get content type for the blog post
             content_type = ContentType.objects.get_for_model(BlogPost)
 
@@ -125,7 +139,7 @@ class BlogDetailView(DetailView):
             messages.success(request, 'Your comment has been submitted and is awaiting moderation.')
         else:
             # Add error message
-            messages.error(request, 'Please fill in all required fields.')
+            messages.error(request, 'Please fill in all required fields with valid data.')
 
         # Redirect back to the post detail page
         return redirect('blog:detail', slug=self.object.slug)

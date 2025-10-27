@@ -6,6 +6,7 @@ from django.utils.text import slugify
 from taggit.managers import TaggableManager
 from markdownx.models import MarkdownxField
 from markdownx.utils import markdownify
+from apps.core.security.validators import ImageFileValidator
 
 
 class Category(models.Model):
@@ -50,7 +51,13 @@ class BlogPost(models.Model):
     # Content
     content = MarkdownxField(help_text="Use Markdown formatting")
     excerpt = models.TextField(max_length=500, help_text="Short description for previews")
-    featured_image = models.ImageField(upload_to='blog/featured/', blank=True, null=True)
+    featured_image = models.ImageField(
+        upload_to='blog/featured/',
+        blank=True,
+        null=True,
+        validators=[ImageFileValidator(max_size=5*1024*1024, max_width=2000, max_height=2000)],
+        help_text="Max size: 5MB, Max dimensions: 2000x2000px"
+    )
 
     # Meta
     tags = TaggableManager(blank=True)
