@@ -35,9 +35,9 @@ variable "cloud_run_memory" {
 }
 
 variable "cloud_run_max_instances" {
-  description = "Maximum number of Cloud Run instances"
+  description = "Maximum number of Cloud Run instances (set to 1 for SQLite)"
   type        = number
-  default     = 10
+  default     = 1
 }
 
 variable "cloud_run_min_instances" {

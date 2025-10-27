@@ -39,23 +39,23 @@ WORKDIR /app
 # Copy only the application code
 COPY app/ .
 
+# Copy entrypoint script
+COPY docker/entrypoint.sh /app/entrypoint.sh
+
 # Create a non-root user to run the app
 RUN useradd -m -u 1000 appuser && \
-    mkdir -p /app/data && \
     mkdir -p /app/staticfiles && \
+    chmod +x /app/entrypoint.sh && \
     chown -R appuser:appuser /app
 
 USER appuser
 
-# Run migrations to initialize the SQLite database
-RUN python manage.py migrate --noinput || true
+# Note: Database initialization and migrations are now handled by entrypoint.sh at runtime
+# This ensures the database is created in /tmp which is writable in Cloud Run
 
-# Collect static files (will be uploaded to GCS in production)
-RUN python manage.py collectstatic --noinput || true
-
-# Health check
+# Health check - using our custom endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8080/health/', timeout=2)" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health/').read()" || exit 1
 
-# Run the application
-CMD exec gunicorn --bind :$PORT --workers 2 --threads 8 --timeout 0 --access-logfile - --error-logfile - portfolio.wsgi:application
+# Run the application using the entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]

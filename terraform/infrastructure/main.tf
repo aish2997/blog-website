@@ -36,14 +36,7 @@ resource "google_storage_bucket" "media" {
     max_age_seconds = 3600
   }
 
-  lifecycle_rule {
-    condition {
-      age = 90
-    }
-    action {
-      type = "Delete"
-    }
-  }
+  # No lifecycle rule - media files should be kept indefinitely
 
   labels = {
     environment = var.environment
@@ -148,7 +141,7 @@ resource "google_cloud_run_service" "portfolio" {
 
         env {
           name  = "DATABASE_PATH"
-          value = "/app/data/db.sqlite3"
+          value = "/tmp/db.sqlite3"
         }
       }
     }

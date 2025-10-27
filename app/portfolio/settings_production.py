@@ -120,7 +120,8 @@ WSGI_APPLICATION = 'portfolio.wsgi.application'
 
 # Database
 # Using SQLite for production (cost-effective for low-traffic portfolio site)
-DATABASE_PATH = os.environ.get('DATABASE_PATH', '/app/data/db.sqlite3')
+# Note: /tmp is the only writable directory in Cloud Run
+DATABASE_PATH = os.environ.get('DATABASE_PATH', '/tmp/db.sqlite3')
 
 # Ensure the data directory exists
 import os
