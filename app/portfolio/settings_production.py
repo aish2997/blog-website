@@ -156,32 +156,38 @@ USE_TZ = True
 GCS_BUCKET_MEDIA = os.environ.get('GCS_BUCKET_MEDIA')
 GCS_BUCKET_STATIC = os.environ.get('GCS_BUCKET_STATIC')
 
+# Configure STORAGES for Django 4.2+
+STORAGES = {}
+
+# Configure static files storage
 if GCS_BUCKET_STATIC:
     # Use GCS for static files
-    STATICFILES_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
-    GS_BUCKET_NAME = GCS_BUCKET_STATIC
-    GS_DEFAULT_ACL = 'publicRead'
+    STORAGES["staticfiles"] = {
+        "BACKEND": "portfolio.storage_backends.StaticStorage",
+    }
     STATIC_URL = f'https://storage.googleapis.com/{GCS_BUCKET_STATIC}/'
     print(f"✅ Using GCS for static files: {GCS_BUCKET_STATIC}")
 else:
-    # Fallback to WhiteNoise - use the correct backend for Django 4.2+
-    STORAGES = {
-        "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-        },
+    # Fallback to WhiteNoise
+    STORAGES["staticfiles"] = {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     }
     STATIC_URL = '/static/'
     print("✅ Using WhiteNoise for static files")
 
+# Configure media files storage (default storage)
 if GCS_BUCKET_MEDIA:
     # Use GCS for media files
-    DEFAULT_FILE_STORAGE = 'portfolio.storage_backends.MediaStorage'
-    GS_MEDIA_BUCKET_NAME = GCS_BUCKET_MEDIA
+    STORAGES["default"] = {
+        "BACKEND": "portfolio.storage_backends.MediaStorage",
+    }
     MEDIA_URL = f'https://storage.googleapis.com/{GCS_BUCKET_MEDIA}/'
     print(f"✅ Using GCS for media files: {GCS_BUCKET_MEDIA}")
 else:
     # Use local filesystem for media
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    STORAGES["default"] = {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    }
     MEDIA_URL = '/media/'
     print("⚠️ Using local filesystem for media files")
 
