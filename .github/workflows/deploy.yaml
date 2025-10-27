@@ -452,19 +452,33 @@ jobs:
           URL="${{ needs.infrastructure.outputs.cloud_run_url }}"
           echo "Testing application at ${URL}"
 
-          # Test homepage
-          response=$(curl -s -o /dev/null -w "%{http_code}" ${URL})
-          if [ $response -eq 200 ]; then
-            echo "✅ Homepage is accessible (HTTP ${response})"
+          # Test homepage with redirect handling
+          response=$(curl -L -s -o /dev/null -w "%{http_code}" --max-time 30 ${URL})
+          initial_response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 ${URL})
+
+          echo "Initial response: HTTP ${initial_response}"
+          echo "Final response (after redirects): HTTP ${response}"
+
+          # Accept redirects as valid
+          if [ $initial_response -eq 200 ] || [ $initial_response -eq 301 ] || [ $initial_response -eq 302 ]; then
+            echo "✅ Homepage initial response valid (HTTP ${initial_response})"
           else
-            echo "❌ Homepage returned HTTP ${response}"
+            echo "❌ Homepage returned unexpected HTTP ${initial_response}"
             exit 1
           fi
 
-          # Test admin page
-          admin_response=$(curl -s -o /dev/null -w "%{http_code}" ${URL}/admin/)
+          # Verify final destination is accessible
+          if [ $response -eq 200 ]; then
+            echo "✅ Homepage accessible after redirects (HTTP ${response})"
+          else
+            echo "❌ Final destination returned HTTP ${response}"
+            exit 1
+          fi
+
+          # Test admin with redirect handling
+          admin_response=$(curl -L -s -o /dev/null -w "%{http_code}" --max-time 30 ${URL}/admin/)
           if [ $admin_response -eq 200 ] || [ $admin_response -eq 302 ]; then
-            echo "✅ Admin page is accessible (HTTP ${admin_response})"
+            echo "✅ Admin page accessible (HTTP ${admin_response})"
           else
             echo "❌ Admin page returned HTTP ${admin_response}"
             exit 1

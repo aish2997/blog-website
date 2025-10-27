@@ -3,6 +3,16 @@
 
 echo "Starting Django application initialization..."
 
+# Debug environment variables
+echo "=== Environment Variables Debug ==="
+echo "DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}"
+echo "DEBUG: ${DEBUG}"
+echo "ALLOWED_HOSTS: ${ALLOWED_HOSTS}"
+echo "CLOUD_RUN_SERVICE_URL: ${CLOUD_RUN_SERVICE_URL}"
+echo "GCS_BUCKET_MEDIA: ${GCS_BUCKET_MEDIA}"
+echo "GCS_BUCKET_STATIC: ${GCS_BUCKET_STATIC}"
+echo "=================================="
+
 # Database path from environment or default
 DATABASE_PATH=${DATABASE_PATH:-/tmp/db.sqlite3}
 
