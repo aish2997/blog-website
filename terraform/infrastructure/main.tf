@@ -143,16 +143,6 @@ resource "google_cloud_run_service" "portfolio" {
           name  = "DATABASE_PATH"
           value = "/tmp/db.sqlite3"
         }
-
-        env {
-          name  = "CLOUD_RUN_SERVICE_URL"
-          value = "https://${google_cloud_run_service.portfolio.status[0].url}"
-        }
-
-        env {
-          name  = "CSRF_TRUSTED_ORIGINS"
-          value = "https://${google_cloud_run_service.portfolio.status[0].url}"
-        }
       }
     }
 
