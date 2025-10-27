@@ -76,12 +76,27 @@ else
     fi
 fi
 
-# Collect static files if not already done
-if [ ! -d "staticfiles" ] || [ -z "$(ls -A staticfiles)" ]; then
-    echo "Collecting static files..."
-    python manage.py collectstatic --noinput
+# Check and collect static files
+echo "Checking static files configuration..."
+echo "STATIC_ROOT: /app/staticfiles"
+echo "STATIC_URL: ${STATIC_URL:-/static/}"
+
+# Always run collectstatic to ensure we have the latest static files
+# The --clear flag ensures old files are removed
+echo "Collecting static files (including Django admin)..."
+python manage.py collectstatic --noinput --clear || {
+    echo "⚠️ WARNING: Failed to collect static files. Admin panel may not render correctly."
+    echo "Checking staticfiles directory..."
+    ls -la /app/staticfiles/ 2>/dev/null || echo "staticfiles directory not found"
+}
+
+# Verify admin static files were collected
+if [ -d "/app/staticfiles/admin" ]; then
+    echo "✅ Django admin static files found in /app/staticfiles/admin"
+    echo "  - CSS files: $(find /app/staticfiles/admin/css -name "*.css" 2>/dev/null | wc -l)"
+    echo "  - JS files: $(find /app/staticfiles/admin/js -name "*.js" 2>/dev/null | wc -l)"
 else
-    echo "Static files already collected"
+    echo "❌ WARNING: Django admin static files NOT found! Admin panel will not render correctly."
 fi
 
 echo "Initialization complete."

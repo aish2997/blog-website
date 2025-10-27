@@ -164,8 +164,12 @@ if GCS_BUCKET_STATIC:
     STATIC_URL = f'https://storage.googleapis.com/{GCS_BUCKET_STATIC}/'
     print(f"✅ Using GCS for static files: {GCS_BUCKET_STATIC}")
 else:
-    # Fallback to WhiteNoise
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    # Fallback to WhiteNoise - use the correct backend for Django 4.2+
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
     STATIC_URL = '/static/'
     print("✅ Using WhiteNoise for static files")
 
@@ -184,7 +188,12 @@ else:
 # Always set these regardless of storage backend
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-STATICFILES_DIRS = [BASE_DIR / 'static'] if os.path.exists(BASE_DIR / 'static') else []
+
+# Ensure static directory is always included (create if it doesn't exist)
+static_dir = BASE_DIR / 'static'
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir, exist_ok=True)
+STATICFILES_DIRS = [static_dir]
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

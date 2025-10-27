@@ -1,0 +1,11 @@
+/* Custom CSS for the portfolio website */
+
+/* Ensure admin interface styles are not overridden */
+.django-admin {
+    /* Placeholder for any admin customizations */
+}
+
+/* Custom styles for the site */
+body {
+    /* Custom font stack if needed */
+}

@@ -44,11 +44,16 @@ COPY docker/entrypoint.sh /app/entrypoint.sh
 
 # Create a non-root user to run the app
 RUN useradd -m -u 1000 appuser && \
-    mkdir -p /app/staticfiles && \
+    mkdir -p /app/staticfiles /app/static && \
     chmod +x /app/entrypoint.sh && \
     chown -R appuser:appuser /app
 
+# Switch to appuser for running Django commands
 USER appuser
+
+# Collect static files during build (including Django admin static files)
+# This ensures admin static files are baked into the image
+RUN python manage.py collectstatic --noinput --clear
 
 # Note: Database initialization and migrations are now handled by entrypoint.sh at runtime
 # This ensures the database is created in /tmp which is writable in Cloud Run
