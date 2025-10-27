@@ -167,6 +167,9 @@ else:
     # Fallback to WhiteNoise
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
     STATIC_URL = '/static/'
+    # WhiteNoise configuration for better admin static files serving
+    WHITENOISE_USE_FINDERS = True
+    WHITENOISE_AUTOREFRESH = False  # Set to False in production for performance
     print("✅ Using WhiteNoise for static files")
 
 if GCS_BUCKET_MEDIA:
@@ -182,9 +185,14 @@ else:
     print("⚠️ Using local filesystem for media files")
 
 # Always set these regardless of storage backend
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Use /tmp/staticfiles for Cloud Run (writable directory)
+STATIC_ROOT = '/tmp/staticfiles' if os.environ.get('K_SERVICE') else os.path.join(BASE_DIR, 'staticfiles')
+MEDIA_ROOT = '/tmp/media' if os.environ.get('K_SERVICE') else os.path.join(BASE_DIR, 'media')
 STATICFILES_DIRS = [BASE_DIR / 'static'] if os.path.exists(BASE_DIR / 'static') else []
+
+# Ensure static and media directories exist
+os.makedirs(STATIC_ROOT, exist_ok=True)
+os.makedirs(MEDIA_ROOT, exist_ok=True)
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

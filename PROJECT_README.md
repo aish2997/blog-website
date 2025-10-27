@@ -145,9 +145,12 @@ Key environment variables for production:
 
 ### Secrets (stored in Secret Manager)
 
-- `DJANGO_SECRET_KEY`: Django secret key
-- `DB_PASSWORD`: Database password
-- `SENDGRID_API_KEY`: Email service API key
+- `django-secret-key`: Django secret key (required)
+- `django-superuser-username`: Admin username (optional, for auto-creation)
+- `django-superuser-email`: Admin email (optional, for auto-creation)
+- `django-superuser-password`: Admin password (optional, for auto-creation)
+
+Note: This project uses SQLite, so no database password is needed.
 
 ## Admin Panel Usage
 

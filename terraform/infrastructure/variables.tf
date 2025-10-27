@@ -64,3 +64,25 @@ variable "docker_image" {
   description = "Docker image to deploy"
   type        = string
 }
+
+# Superuser Configuration (Optional - can be set via terraform.tfvars or environment)
+variable "django_superuser_username" {
+  description = "Django superuser username (stored in Secret Manager)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "django_superuser_email" {
+  description = "Django superuser email (stored in Secret Manager)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "django_superuser_password" {
+  description = "Django superuser password (stored in Secret Manager)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

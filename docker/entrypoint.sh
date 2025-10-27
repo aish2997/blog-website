@@ -76,12 +76,30 @@ else
     fi
 fi
 
-# Collect static files if not already done
-if [ ! -d "staticfiles" ] || [ -z "$(ls -A staticfiles)" ]; then
-    echo "Collecting static files..."
-    python manage.py collectstatic --noinput
+# Collect static files
+# In Cloud Run, we need to collect to /tmp/staticfiles (writable directory)
+STATIC_DIR="/tmp/staticfiles"
+if [ -n "$K_SERVICE" ]; then
+    # Running on Cloud Run
+    echo "Running on Cloud Run - collecting static files to $STATIC_DIR"
 else
-    echo "Static files already collected"
+    # Local development
+    STATIC_DIR="staticfiles"
+    echo "Running locally - collecting static files to $STATIC_DIR"
+fi
+
+# Always collect static files on startup to ensure admin assets are available
+echo "Collecting static files..."
+python manage.py collectstatic --noinput --clear 2>&1 || {
+    echo "⚠️ Static file collection had issues, but continuing..."
+}
+
+# Verify admin static files were collected
+if [ -d "$STATIC_DIR/admin" ]; then
+    echo "✅ Admin static files collected successfully"
+    ls -la "$STATIC_DIR/admin/" | head -5
+else
+    echo "⚠️ WARNING: Admin static files may not be properly collected!"
 fi
 
 echo "Initialization complete."

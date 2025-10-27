@@ -162,8 +162,10 @@ Secrets are stored in Google Secret Manager:
 # Update Django secret key
 echo -n "your-new-secret-key" | gcloud secrets versions add django-secret-key --data-file=-
 
-# Update database password
-echo -n "your-new-password" | gcloud secrets versions add db-password --data-file=-
+# Update superuser credentials (if using Secret Manager for admin access)
+echo -n "admin" | gcloud secrets versions add django-superuser-username --data-file=-
+echo -n "admin@example.com" | gcloud secrets versions add django-superuser-email --data-file=-
+echo -n "your-secure-password" | gcloud secrets versions add django-superuser-password --data-file=-
 ```
 
 ## Database Management

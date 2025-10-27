@@ -42,11 +42,17 @@ COPY app/ .
 # Copy entrypoint script
 COPY docker/entrypoint.sh /app/entrypoint.sh
 
+# Collect static files during build (including admin assets)
+# This ensures all static files are bundled in the image
+RUN DJANGO_SETTINGS_MODULE=portfolio.settings python manage.py collectstatic --noinput || echo "Static collection during build skipped"
+
 # Create a non-root user to run the app
 RUN useradd -m -u 1000 appuser && \
-    mkdir -p /app/staticfiles && \
+    mkdir -p /app/staticfiles /tmp/staticfiles && \
     chmod +x /app/entrypoint.sh && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app && \
+    # Ensure /tmp/staticfiles is writable by appuser
+    chown -R appuser:appuser /tmp/staticfiles || true
 
 USER appuser
 
