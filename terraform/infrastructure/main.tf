@@ -18,10 +18,6 @@ data "google_service_account" "cloud_run" {
   account_id = "portfolio-cloud-run-sa"
 }
 
-data "google_secret_manager_secret" "django_secret_key" {
-  secret_id = "django-secret-key"
-}
-
 # Cloud Storage Buckets
 resource "google_storage_bucket" "media" {
   name     = "${var.project_id}-portfolio-media-${var.environment}"
@@ -124,11 +120,43 @@ resource "google_cloud_run_service" "portfolio" {
           value = google_storage_bucket.static.name
         }
 
+        # Django SECRET_KEY from Secret Manager
         env {
           name  = "SECRET_KEY"
           value_from {
             secret_key_ref {
-              name = data.google_secret_manager_secret.django_secret_key.secret_id
+              name = google_secret_manager_secret.django_secret_key.secret_id
+              key  = "latest"
+            }
+          }
+        }
+
+        # Admin credentials from Secret Manager
+        env {
+          name  = "DJANGO_SUPERUSER_USERNAME"
+          value_from {
+            secret_key_ref {
+              name = google_secret_manager_secret.django_superuser_username.secret_id
+              key  = "latest"
+            }
+          }
+        }
+
+        env {
+          name  = "DJANGO_SUPERUSER_PASSWORD"
+          value_from {
+            secret_key_ref {
+              name = google_secret_manager_secret.django_superuser_password.secret_id
+              key  = "latest"
+            }
+          }
+        }
+
+        env {
+          name  = "DJANGO_SUPERUSER_EMAIL"
+          value_from {
+            secret_key_ref {
+              name = google_secret_manager_secret.django_superuser_email.secret_id
               key  = "latest"
             }
           }

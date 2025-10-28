@@ -1,6 +1,8 @@
 # Core Django packages
 Django==4.2.9
 django-environ==0.11.2
+# Fix for importlib.metadata compatibility
+importlib-metadata>=6.0.0
 
 # Database
 psycopg2-binary==2.9.9

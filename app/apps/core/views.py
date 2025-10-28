@@ -126,19 +126,63 @@ class HealthCheckView(View):
     """Health check endpoint for monitoring"""
 
     def get(self, request):
+        import os
+        from django.conf import settings
+
+        health_status = {
+            'status': 'healthy',
+            'service': 'portfolio',
+            'checks': {}
+        }
+        is_healthy = True
+
+        # Test database connection
         try:
-            # Test database connection
             from django.db import connection
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1")
-
-            return JsonResponse({
-                'status': 'healthy',
-                'service': 'portfolio',
-                'database': 'connected'
-            })
+            health_status['checks']['database'] = 'connected'
         except Exception as e:
-            return JsonResponse({
-                'status': 'unhealthy',
-                'error': str(e)
-            }, status=503)
+            health_status['checks']['database'] = f'error: {str(e)}'
+            is_healthy = False
+
+        # Test static files (especially admin CSS)
+        try:
+            static_root = settings.STATIC_ROOT
+            admin_css_path = os.path.join(static_root, 'admin', 'css', 'base.css')
+            if os.path.exists(admin_css_path):
+                health_status['checks']['admin_static'] = 'present'
+            else:
+                health_status['checks']['admin_static'] = 'missing'
+                # Don't mark as unhealthy, just warn
+        except Exception as e:
+            health_status['checks']['admin_static'] = f'error: {str(e)}'
+
+        # Test media directory access
+        try:
+            media_root = settings.MEDIA_ROOT
+            if os.path.exists(media_root):
+                health_status['checks']['media_directory'] = 'accessible'
+            else:
+                # Try to create it
+                os.makedirs(media_root, exist_ok=True)
+                health_status['checks']['media_directory'] = 'created'
+        except Exception as e:
+            health_status['checks']['media_directory'] = f'error: {str(e)}'
+
+        # Check for critical settings
+        try:
+            secret_key_set = bool(settings.SECRET_KEY and len(settings.SECRET_KEY) > 40)
+            health_status['checks']['secret_key'] = 'configured' if secret_key_set else 'missing'
+            if not secret_key_set:
+                is_healthy = False
+        except:
+            health_status['checks']['secret_key'] = 'error'
+            is_healthy = False
+
+        # Overall status
+        health_status['status'] = 'healthy' if is_healthy else 'unhealthy'
+
+        # Return appropriate status code
+        status_code = 200 if is_healthy else 503
+        return JsonResponse(health_status, status=status_code)

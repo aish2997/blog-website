@@ -1,5 +1,5 @@
 # Multi-stage build for optimized production image
-FROM python:3.9-slim as builder
+FROM python:3.12-slim as builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -18,7 +18,7 @@ RUN pip install --upgrade pip && \
     pip install gunicorn google-cloud-secret-manager
 
 # Production image
-FROM python:3.9-slim
+FROM python:3.12-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -30,7 +30,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # No runtime dependencies needed for SQLite (it's built-in)
 
 # Copy Python packages from builder
-COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Set work directory
@@ -53,7 +53,16 @@ USER appuser
 
 # Collect static files during build (including Django admin static files)
 # This ensures admin static files are baked into the image
-RUN python manage.py collectstatic --noinput --clear
+RUN python manage.py collectstatic --noinput --clear && \
+    # Verify that admin static files were collected successfully
+    test -d /app/staticfiles/admin && \
+    test -f /app/staticfiles/admin/css/base.css && \
+    echo "✅ Admin static files verified" || \
+    (echo "❌ Admin static files missing!" && exit 1)
+
+# Add a health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health/').read()" || exit 1
 
 # Note: Database initialization and migrations are now handled by entrypoint.sh at runtime
 # This ensures the database is created in /tmp which is writable in Cloud Run

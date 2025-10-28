@@ -39,18 +39,39 @@ if [ ! -f "$DATABASE_PATH" ]; then
     echo "Running database migrations..."
     python manage.py migrate --noinput
 
-    # Create superuser if credentials are provided
+    # Create superuser if credentials are provided (from Secret Manager)
     if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ] && [ -n "$DJANGO_SUPERUSER_EMAIL" ]; then
-        echo "Creating superuser..."
+        echo "Checking for admin superuser..."
+
+        # Use a Python script for safer credential handling
         python manage.py shell -c "
 from django.contrib.auth import get_user_model
+import sys
+
 User = get_user_model()
-if not User.objects.filter(username='$DJANGO_SUPERUSER_USERNAME').exists():
-    User.objects.create_superuser('$DJANGO_SUPERUSER_USERNAME', '$DJANGO_SUPERUSER_EMAIL', '$DJANGO_SUPERUSER_PASSWORD')
-    print('Superuser created successfully')
-else:
-    print('Superuser already exists')
+username = '$DJANGO_SUPERUSER_USERNAME'
+
+try:
+    if User.objects.filter(username=username).exists():
+        print(f'✅ Superuser {username} already exists')
+    else:
+        # Create the superuser
+        User.objects.create_superuser(
+            username=username,
+            email='$DJANGO_SUPERUSER_EMAIL',
+            password='$DJANGO_SUPERUSER_PASSWORD'
+        )
+        print(f'✅ Superuser {username} created successfully')
+except Exception as e:
+    print(f'❌ Error creating superuser: {e}', file=sys.stderr)
+    # Don't exit - let the app run but log the error
 "
+    else
+        echo "ℹ️  Admin credentials not provided via Secret Manager. Skipping superuser creation."
+        echo "   To enable automatic admin creation, configure the following secrets in Google Secret Manager:"
+        echo "   - django-superuser-username"
+        echo "   - django-superuser-password"
+        echo "   - django-superuser-email"
     fi
 
     # Backup the newly created database to GCS
@@ -76,27 +97,30 @@ else
     fi
 fi
 
-# Check and collect static files
-echo "Checking static files configuration..."
+# Verify static files (already collected during Docker build)
+echo "Verifying static files configuration..."
 echo "STATIC_ROOT: /app/staticfiles"
 echo "STATIC_URL: ${STATIC_URL:-/static/}"
 
-# Always run collectstatic to ensure we have the latest static files
-# The --clear flag ensures old files are removed
-echo "Collecting static files (including Django admin)..."
-python manage.py collectstatic --noinput --clear || {
-    echo "⚠️ WARNING: Failed to collect static files. Admin panel may not render correctly."
-    echo "Checking staticfiles directory..."
-    ls -la /app/staticfiles/ 2>/dev/null || echo "staticfiles directory not found"
-}
-
-# Verify admin static files were collected
+# Verify admin static files exist (they should have been collected during Docker build)
 if [ -d "/app/staticfiles/admin" ]; then
     echo "✅ Django admin static files found in /app/staticfiles/admin"
     echo "  - CSS files: $(find /app/staticfiles/admin/css -name "*.css" 2>/dev/null | wc -l)"
     echo "  - JS files: $(find /app/staticfiles/admin/js -name "*.js" 2>/dev/null | wc -l)"
+
+    # Verify critical admin files exist
+    if [ -f "/app/staticfiles/admin/css/base.css" ]; then
+        echo "✅ Critical admin CSS file (base.css) verified"
+    else
+        echo "❌ ERROR: Critical admin CSS file (base.css) is missing!"
+        echo "Admin panel will not render correctly. Check Docker build logs."
+        # Don't exit - let the app run but log the error
+    fi
 else
-    echo "❌ WARNING: Django admin static files NOT found! Admin panel will not render correctly."
+    echo "❌ ERROR: Django admin static files NOT found in /app/staticfiles/admin!"
+    echo "Admin panel will not render correctly. This should have been fixed during Docker build."
+    echo "Check the Docker build logs for collectstatic errors."
+    # Don't exit - let the app run but log the error
 fi
 
 echo "Initialization complete."

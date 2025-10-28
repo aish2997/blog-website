@@ -4,7 +4,6 @@ Production settings for portfolio project.
 import os
 from pathlib import Path
 import environ
-from google.cloud import secretmanager
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -15,32 +14,31 @@ env = environ.Env()
 # GCP Project ID
 GCP_PROJECT_ID = os.environ.get('GCP_PROJECT_ID')
 
-# SECRET KEY - with multiple fallback mechanisms
-SECRET_KEY = None
-
-# Try environment variable first
+# SECRET KEY - Critical for security, no fallbacks allowed in production
+# Cloud Run will inject this from Secret Manager automatically
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
-# If not found and we have GCP_PROJECT_ID, try Secret Manager
-if not SECRET_KEY and GCP_PROJECT_ID:
-    try:
-        client = secretmanager.SecretManagerServiceClient()
-        name = f"projects/{GCP_PROJECT_ID}/secrets/django-secret-key/versions/latest"
-        response = client.access_secret_version(request={"name": name})
-        SECRET_KEY = response.payload.data.decode("UTF-8")
-        print(f"✅ Secret key loaded from Secret Manager")
-    except Exception as e:
-        print(f"⚠️ Could not load secret from Secret Manager: {e}")
-
-# Final fallback - generate a key (NOT for production use)
+# Fail fast if SECRET_KEY is not set - this is a critical security requirement
 if not SECRET_KEY:
-    print("❌ WARNING: Using insecure fallback SECRET_KEY. Set SECRET_KEY env var or configure Secret Manager!")
-    SECRET_KEY = 'INSECURE-FALLBACK-KEY-REPLACE-IN-PRODUCTION'
+    from django.core.exceptions import ImproperlyConfigured
+    error_msg = """
+    ❌ CRITICAL ERROR: SECRET_KEY environment variable is not set!
 
-# Validate SECRET_KEY
-if not SECRET_KEY or SECRET_KEY == 'INSECURE-FALLBACK-KEY-REPLACE-IN-PRODUCTION':
-    import warnings
-    warnings.warn("SECRET_KEY is not properly configured!", RuntimeWarning)
+    This is a security requirement and the application cannot start without it.
+    The SECRET_KEY should be provided by Cloud Run from Secret Manager.
+
+    If running locally, set: export SECRET_KEY='your-dev-secret-key'
+    If on Cloud Run, ensure the secret is configured in Terraform and has a value in Secret Manager.
+    """
+    print(error_msg)
+    raise ImproperlyConfigured("SECRET_KEY environment variable is required and must be set!")
+
+# Additional validation to ensure it's not a placeholder
+if SECRET_KEY in ['INSECURE', 'CHANGEME', 'REPLACE', 'TODO'] or len(SECRET_KEY) < 50:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("SECRET_KEY appears to be a placeholder or too short. Please use a proper secret key!")
+
+print("✅ SECRET_KEY loaded successfully from environment")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
@@ -167,12 +165,26 @@ if GCS_BUCKET_STATIC:
     STATIC_URL = f'https://storage.googleapis.com/{GCS_BUCKET_STATIC}/'
     print(f"✅ Using GCS for static files: {GCS_BUCKET_STATIC}")
 else:
-    # Fallback to WhiteNoise
+    # Fallback to WhiteNoise with optimized settings
     STORAGES["staticfiles"] = {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     }
     STATIC_URL = '/static/'
-    print("✅ Using WhiteNoise for static files")
+
+    # WhiteNoise configuration for proper admin static file serving
+    WHITENOISE_USE_FINDERS = True  # Find static files from all apps
+    WHITENOISE_AUTOREFRESH = False  # Don't refresh in production
+    WHITENOISE_COMPRESS_OFFLINE = True  # Pre-compress files
+    WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 'xz']
+    # Ensure proper MIME types for CSS and JS
+    WHITENOISE_MIMETYPES = {
+        '.css': 'text/css',
+        '.js': 'application/javascript',
+    }
+    # Cache static files for 1 year (they have cache-busting hashes)
+    WHITENOISE_MAX_AGE = 31536000
+
+    print("✅ Using WhiteNoise for static files with optimized settings")
 
 # Configure media files storage (default storage)
 if GCS_BUCKET_MEDIA:
@@ -199,6 +211,12 @@ static_dir = BASE_DIR / 'static'
 if not os.path.exists(static_dir):
     os.makedirs(static_dir, exist_ok=True)
 STATICFILES_DIRS = [static_dir]
+
+# Configure static file finders to ensure admin files are found
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',  # Find files in STATICFILES_DIRS
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',  # Find files in app static/ directories
+]
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
