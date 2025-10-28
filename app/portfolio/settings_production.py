@@ -184,7 +184,7 @@ else:
     # Use WhiteNoise with traditional configuration
     # DO NOT use STORAGES when using STATICFILES_STORAGE
     STATIC_URL = '/static/'
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'  # Simpler, no manifest needed
 
     # These settings will now actually be used by WhiteNoise:
     WHITENOISE_USE_FINDERS = True  # Critical: allows WhiteNoise to find admin files
