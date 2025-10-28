@@ -169,6 +169,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # WhiteNoise configuration for static files
 # Use the new STORAGES setting for Django 4.2+
 STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
@@ -191,6 +194,15 @@ MARKDOWNX_MARKDOWN_EXTENSIONS = [
 MARKDOWNX_EDITOR_RESIZABLE = True
 MARKDOWNX_IMAGE_MAX_SIZE = {'size': (800, 0), 'quality': 90}
 MARKDOWNX_MEDIA_PATH = 'markdownx/'
+MARKDOWNX_UPLOAD_URLS_PATH = '/markdownx/upload/'
+MARKDOWNX_UPLOAD_MAX_SIZE = 50 * 1024 * 1024  # 50 MB
+MARKDOWNX_UPLOAD_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/svg+xml', 'image/gif', 'image/webp']
+# Allow image uploads without authentication check (for admin users)
+MARKDOWNX_SERVER_CALL_LATENCY = 500
+
+# Ensure CSRF token is accessible to JavaScript for MarkdownX uploads
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read the CSRF cookie
+CSRF_USE_SESSIONS = False  # Store CSRF token in cookie (not just session)
 
 # Taggit settings
 TAGGIT_CASE_INSENSITIVE = True
