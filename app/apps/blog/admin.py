@@ -63,10 +63,8 @@ class BlogPostAdmin(MarkdownxModelAdmin):
             obj.author = request.user
         super().save_model(request, obj, form, change)
 
-    class Media:
-        css = {
-            'all': ('admin/css/blog_admin.css',)
-        }
+    # Removed custom CSS reference that was causing admin panel CSS to break
+    # The file 'admin/css/blog_admin.css' didn't exist
 
     actions = ['publish_posts', 'unpublish_posts', 'feature_posts', 'unfeature_posts']
 

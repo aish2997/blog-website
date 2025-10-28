@@ -27,7 +27,7 @@ DATABASE_PATH=${DATABASE_PATH:-/tmp/db.sqlite3}
 if [ -n "$GCS_BUCKET_MEDIA" ]; then
     echo "Attempting to restore database from GCS..."
     python manage.py sync_database --action restore 2>&1 || {
-        echo "Warning: Database restore failed or skipped (this is normal on first deployment)"
+        echo "Note: Database restore failed or no backup exists (normal for first deployment)"
     }
 fi
 
@@ -38,22 +38,30 @@ if [ ! -f "$DATABASE_PATH" ]; then
     # Run migrations to create database schema
     echo "Running database migrations..."
     python manage.py migrate --noinput
+else
+    echo "Database found at $DATABASE_PATH"
 
-    # Create superuser if credentials are provided (from Secret Manager)
-    if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ] && [ -n "$DJANGO_SUPERUSER_EMAIL" ]; then
-        echo "Checking for admin superuser..."
+    # Still run migrations in case there are new ones
+    echo "Checking for new migrations..."
+    python manage.py migrate --noinput
+fi
 
-        # Use a Python script for safer credential handling
-        python manage.py shell -c "
+# ALWAYS check for superuser and create if missing (handles ephemeral database issue)
+if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ] && [ -n "$DJANGO_SUPERUSER_EMAIL" ]; then
+    echo "Ensuring admin superuser exists..."
+
+    # Use a Python script for safer credential handling
+    SUPERUSER_CREATED=$(python manage.py shell -c "
 from django.contrib.auth import get_user_model
 import sys
 
 User = get_user_model()
 username = '$DJANGO_SUPERUSER_USERNAME'
+created = False
 
 try:
     if User.objects.filter(username=username).exists():
-        print(f'✅ Superuser {username} already exists')
+        print('exists')
     else:
         # Create the superuser
         User.objects.create_superuser(
@@ -61,40 +69,42 @@ try:
             email='$DJANGO_SUPERUSER_EMAIL',
             password='$DJANGO_SUPERUSER_PASSWORD'
         )
-        print(f'✅ Superuser {username} created successfully')
+        print('created')
+        created = True
 except Exception as e:
-    print(f'❌ Error creating superuser: {e}', file=sys.stderr)
-    # Don't exit - let the app run but log the error
-"
-    else
-        echo "ℹ️  Admin credentials not provided via Secret Manager. Skipping superuser creation."
-        echo "   To enable automatic admin creation, configure the following secrets in Google Secret Manager:"
-        echo "   - django-superuser-username"
-        echo "   - django-superuser-password"
-        echo "   - django-superuser-email"
-    fi
+    print(f'error: {e}', file=sys.stderr)
+    sys.exit(1)
+")
 
-    # Backup the newly created database to GCS
-    if [ -n "$GCS_BUCKET_MEDIA" ]; then
-        echo "Backing up new database to GCS..."
-        python manage.py sync_database --action backup --force 2>&1 || {
-            echo "Warning: Initial backup failed (check GCS permissions)"
-        }
+    if [ "$SUPERUSER_CREATED" = "created" ]; then
+        echo "✅ Superuser created successfully"
+
+        # Backup database after creating superuser
+        if [ -n "$GCS_BUCKET_MEDIA" ]; then
+            echo "Backing up database with new superuser to GCS..."
+            python manage.py sync_database --action backup --force 2>&1 || {
+                echo "Warning: Backup after superuser creation failed"
+            }
+        fi
+    elif [ "$SUPERUSER_CREATED" = "exists" ]; then
+        echo "✅ Superuser already exists"
+    else
+        echo "⚠️  Warning: Could not verify/create superuser"
     fi
 else
-    echo "Database found at $DATABASE_PATH"
+    echo "⚠️  Admin credentials not provided via Secret Manager. Admin panel will not be accessible."
+    echo "   Configure these secrets in Google Secret Manager:"
+    echo "   - django-superuser-username"
+    echo "   - django-superuser-password"
+    echo "   - django-superuser-email"
+fi
 
-    # Still run migrations in case there are new ones
-    echo "Checking for new migrations..."
-    python manage.py migrate --noinput
-
-    # Backup database after migrations
-    if [ -n "$GCS_BUCKET_MEDIA" ]; then
-        echo "Backing up database to GCS after migrations..."
-        python manage.py sync_database --action backup 2>&1 || {
-            echo "Warning: Post-migration backup skipped"
-        }
-    fi
+# Final backup to ensure latest state is saved
+if [ -n "$GCS_BUCKET_MEDIA" ]; then
+    echo "Performing final database backup to GCS..."
+    python manage.py sync_database --action backup 2>&1 || {
+        echo "Note: Final backup skipped (database may be unchanged)"
+    }
 fi
 
 # Verify static files (already collected during Docker build)

@@ -72,6 +72,13 @@ resource "google_storage_bucket_iam_member" "static_public" {
   member = "allUsers"
 }
 
+# Grant Cloud Run service account write access to media bucket for database backups
+resource "google_storage_bucket_iam_member" "media_service_account" {
+  bucket = google_storage_bucket.media.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${data.google_service_account.cloud_run.email}"
+}
+
 # Cloud Run Service
 resource "google_cloud_run_service" "portfolio" {
   name     = "portfolio-${var.environment}"
