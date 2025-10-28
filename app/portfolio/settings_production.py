@@ -18,27 +18,44 @@ GCP_PROJECT_ID = os.environ.get('GCP_PROJECT_ID')
 # Cloud Run will inject this from Secret Manager automatically
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
-# Fail fast if SECRET_KEY is not set - this is a critical security requirement
+# Import sys to check if we're running collectstatic
+import sys
+IS_COLLECTING_STATIC = 'collectstatic' in sys.argv
+
+# Fail fast if SECRET_KEY is not set - EXCEPT during collectstatic in build
 if not SECRET_KEY:
     from django.core.exceptions import ImproperlyConfigured
-    error_msg = """
-    ❌ CRITICAL ERROR: SECRET_KEY environment variable is not set!
 
-    This is a security requirement and the application cannot start without it.
-    The SECRET_KEY should be provided by Cloud Run from Secret Manager.
+    # Allow missing SECRET_KEY only during collectstatic (build phase)
+    if IS_COLLECTING_STATIC:
+        print("⚠️  WARNING: Using temporary SECRET_KEY for collectstatic only (build phase)")
+        SECRET_KEY = 'temporary-key-for-collectstatic-only'
+    else:
+        error_msg = """
+        ❌ CRITICAL ERROR: SECRET_KEY environment variable is not set!
 
-    If running locally, set: export SECRET_KEY='your-dev-secret-key'
-    If on Cloud Run, ensure the secret is configured in Terraform and has a value in Secret Manager.
-    """
-    print(error_msg)
-    raise ImproperlyConfigured("SECRET_KEY environment variable is required and must be set!")
+        This is a security requirement and the application cannot start without it.
+        The SECRET_KEY should be provided by Cloud Run from Secret Manager.
 
-# Additional validation to ensure it's not a placeholder
-if SECRET_KEY in ['INSECURE', 'CHANGEME', 'REPLACE', 'TODO'] or len(SECRET_KEY) < 50:
-    from django.core.exceptions import ImproperlyConfigured
-    raise ImproperlyConfigured("SECRET_KEY appears to be a placeholder or too short. Please use a proper secret key!")
+        If running locally, set: export SECRET_KEY='your-dev-secret-key'
+        If on Cloud Run, ensure the secret is configured in Terraform and has a value in Secret Manager.
+        """
+        print(error_msg)
+        raise ImproperlyConfigured("SECRET_KEY environment variable is required and must be set!")
 
-print("✅ SECRET_KEY loaded successfully from environment")
+# Additional validation - but skip during collectstatic
+if not IS_COLLECTING_STATIC:
+    # Check for build-time key that shouldn't be used at runtime
+    if SECRET_KEY == 'build-time-key-only-for-collectstatic-not-for-production':
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured("Build-time SECRET_KEY detected at runtime! Real SECRET_KEY must be provided by Cloud Run.")
+
+    # Check for other placeholder values
+    if SECRET_KEY in ['INSECURE', 'CHANGEME', 'REPLACE', 'TODO', 'temporary-key-for-collectstatic-only'] or len(SECRET_KEY) < 50:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured("SECRET_KEY appears to be a placeholder or too short. Please use a proper secret key!")
+
+    print("✅ SECRET_KEY loaded successfully from environment")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
