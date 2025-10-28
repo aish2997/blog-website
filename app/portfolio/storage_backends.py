@@ -9,8 +9,11 @@ import os
 class MediaStorage(GoogleCloudStorage):
     """Custom storage for media files"""
     bucket_name = os.environ.get('GCS_BUCKET_MEDIA')
-    default_acl = 'publicRead'
+    # Don't set ACL - bucket has uniform access control
+    default_acl = None
     file_overwrite = False
+    # Ensure we're not trying to set individual object permissions
+    querystring_auth = False
 
     def __init__(self, **kwargs):
         if not self.bucket_name:
@@ -23,8 +26,11 @@ class MediaStorage(GoogleCloudStorage):
 class StaticStorage(GoogleCloudStorage):
     """Custom storage for static files"""
     bucket_name = os.environ.get('GCS_BUCKET_STATIC')
-    default_acl = 'publicRead'
+    # Don't set ACL - bucket has uniform access control
+    default_acl = None
     file_overwrite = True
+    # Ensure we're not trying to set individual object permissions
+    querystring_auth = False
 
     def __init__(self, **kwargs):
         if not self.bucket_name:
