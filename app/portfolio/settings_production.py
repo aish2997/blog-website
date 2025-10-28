@@ -182,26 +182,18 @@ if GCS_BUCKET_STATIC:
     STATIC_URL = f'https://storage.googleapis.com/{GCS_BUCKET_STATIC}/'
     print(f"✅ Using GCS for static files: {GCS_BUCKET_STATIC}")
 else:
-    # Fallback to WhiteNoise with optimized settings
-    STORAGES["staticfiles"] = {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    }
+    # Fallback to WhiteNoise - using traditional configuration that actually works
     STATIC_URL = '/static/'
 
-    # WhiteNoise configuration for proper admin static file serving
-    WHITENOISE_USE_FINDERS = True  # Find static files from all apps
-    WHITENOISE_AUTOREFRESH = False  # Don't refresh in production
-    WHITENOISE_COMPRESS_OFFLINE = True  # Pre-compress files
-    WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 'xz']
-    # Ensure proper MIME types for CSS and JS
-    WHITENOISE_MIMETYPES = {
-        '.css': 'text/css',
-        '.js': 'application/javascript',
-    }
-    # Cache static files for 1 year (they have cache-busting hashes)
-    WHITENOISE_MAX_AGE = 31536000
+    # Use the old-style configuration (not STORAGES) so WHITENOISE_* settings work
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-    print("✅ Using WhiteNoise for static files with optimized settings")
+    # These settings will now actually be used by WhiteNoise:
+    WHITENOISE_USE_FINDERS = True  # Critical: allows WhiteNoise to find admin files
+    WHITENOISE_AUTOREFRESH = False  # Don't refresh in production
+    WHITENOISE_MAX_AGE = 31536000  # Cache for 1 year
+
+    print("✅ Using WhiteNoise for static files (traditional configuration)")
 
 # Configure media files storage (default storage)
 if GCS_BUCKET_MEDIA:
