@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load markdownify %}
 
 {% block title %}{{ project.name }} - {{ block.super }}{% endblock %}
 
@@ -443,7 +442,7 @@
     <div class="description-section">
         <h2 class="section-title">Project Description</h2>
         <div class="project-description">
-            {{ project.description|markdownify }}
+            {{ project.get_markdown_description|safe }}
         </div>
     </div>
 </section>
