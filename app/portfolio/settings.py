@@ -54,7 +54,6 @@ INSTALLED_APPS = [
     # Third-party apps
     'taggit',
     'markdownx',
-    'markdownify',
     'hitcount',
     'django_extensions',
     'whitenoise.runserver_nostatic',

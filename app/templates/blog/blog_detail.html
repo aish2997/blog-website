@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load markdownify %}
 
 {% block title %}{{ post.title }} - {{ block.super }}{% endblock %}
 
@@ -636,7 +635,7 @@
 
     <!-- Article Content -->
     <div class="article-content">
-        {{ post.content|markdownify }}
+        {{ post.get_markdown_content|safe }}
     </div>
 
     <!-- Tags -->
