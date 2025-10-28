@@ -122,11 +122,6 @@ resource "google_cloud_run_service" "portfolio" {
           value = google_storage_bucket.media.name
         }
 
-        env {
-          name  = "GCS_BUCKET_STATIC"
-          value = google_storage_bucket.static.name
-        }
-
         # Django SECRET_KEY from Secret Manager
         env {
           name  = "SECRET_KEY"
