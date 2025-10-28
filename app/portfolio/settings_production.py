@@ -193,31 +193,16 @@ else:
 
     print("✅ Using WhiteNoise for static files (traditional configuration)")
 
-# Configure media files storage
-if GCS_BUCKET_STATIC:
-    # If using STORAGES for static files, also use it for media
-    if GCS_BUCKET_MEDIA:
-        STORAGES["default"] = {
-            "BACKEND": "portfolio.storage_backends.MediaStorage",
-        }
-        MEDIA_URL = f'https://storage.googleapis.com/{GCS_BUCKET_MEDIA}/'
-        print(f"✅ Using GCS for media files: {GCS_BUCKET_MEDIA}")
-    else:
-        STORAGES["default"] = {
-            "BACKEND": "django.core.files.storage.FileSystemStorage",
-        }
-        MEDIA_URL = '/media/'
-        print("⚠️ Using local filesystem for media files")
+# Configure media files storage independently from static files
+if GCS_BUCKET_MEDIA:
+    # Use GCS for media files with traditional configuration
+    DEFAULT_FILE_STORAGE = 'portfolio.storage_backends.MediaStorage'
+    MEDIA_URL = f'https://storage.googleapis.com/{GCS_BUCKET_MEDIA}/'
+    print(f"✅ Using GCS for media files: {GCS_BUCKET_MEDIA}")
 else:
-    # If using traditional configuration for static files, use it for media too
-    if GCS_BUCKET_MEDIA:
-        DEFAULT_FILE_STORAGE = 'portfolio.storage_backends.MediaStorage'
-        MEDIA_URL = f'https://storage.googleapis.com/{GCS_BUCKET_MEDIA}/'
-        print(f"✅ Using GCS for media files: {GCS_BUCKET_MEDIA}")
-    else:
-        # Use Django's default (no need to specify)
-        MEDIA_URL = '/media/'
-        print("⚠️ Using local filesystem for media files")
+    # Use local filesystem for media (Django default - no need to specify)
+    MEDIA_URL = '/media/'
+    print("⚠️ Using local filesystem for media files")
 
 # Always set these regardless of storage backend
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
