@@ -78,7 +78,7 @@ INSTALLED_APPS = [
     'taggit',
     'markdownx',
     'hitcount',
-    'whitenoise.runserver_nostatic',
+    # 'whitenoise.runserver_nostatic',  # REMOVED - This breaks static files in production!
     'django_extensions',
     'storages',  # For Google Cloud Storage
 
