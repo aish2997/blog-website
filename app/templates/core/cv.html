@@ -436,7 +436,11 @@
             </div>
             <div class="cv-meta-item">
                 <span class="cv-meta-value">{{ cv_views|default:0 }}</span>
-                <span class="cv-meta-label">CV Views</span>
+                <span class="cv-meta-label">Page Views</span>
+            </div>
+            <div class="cv-meta-item">
+                <span class="cv-meta-value">{{ cv_downloads|default:0 }}</span>
+                <span class="cv-meta-label">PDF Downloads</span>
             </div>
             <div class="cv-meta-item">
                 <span class="cv-meta-value">{{ profile.updated_at|date:"M Y"|default:"Recent" }}</span>
@@ -446,7 +450,7 @@
 
         <div class="cv-download">
             {% if user.is_authenticated %}
-            <a href="{% url 'core:cv_download' %}" class="btn">
+            <a href="{% url 'core:cv_download' %}" class="btn" onclick="if(window.trackGA4Event){trackGA4Event('cv_download',{'user':'{{ user.username|escapejs }}','method':'direct'});}">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>

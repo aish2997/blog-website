@@ -161,29 +161,3 @@ class Project(models.Model):
         # This would be implemented to fetch data from GitHub API
         # For now, it's a placeholder
         pass
-
-
-class ProjectUpdate(models.Model):
-    """Track project updates/changelog"""
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='updates')
-    title = models.CharField(max_length=200)
-    content = models.TextField()
-    version = models.CharField(max_length=20, blank=True)
-    update_type = models.CharField(max_length=20, choices=[
-        ('feature', 'New Feature'),
-        ('bugfix', 'Bug Fix'),
-        ('improvement', 'Improvement'),
-        ('documentation', 'Documentation'),
-        ('other', 'Other'),
-    ], default='feature')
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ['-created_at']
-        verbose_name = 'Project Update'
-        verbose_name_plural = 'Project Updates'
-
-    def __str__(self):
-        return f"{self.project.title} - {self.title}"

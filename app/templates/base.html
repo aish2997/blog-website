@@ -6,6 +6,57 @@
     <meta name="description" content="{{ SITE_DESCRIPTION|default:'Full Stack Developer & Software Engineer' }}">
     <title>{% block title %}{{ SITE_NAME|default:"Aishwarya Bhargava" }}{% endblock %}</title>
 
+    <!-- Google Analytics 4 - Consent-based loading -->
+    {% if GA4_MEASUREMENT_ID %}
+    <script>
+        // GA4 Consent Mode - respects GDPR cookie consent
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+
+        // Default to denied (GDPR compliant)
+        gtag('consent', 'default', {
+            'analytics_storage': 'denied'
+        });
+
+        // Check consent and load GA4 if accepted
+        (function() {
+            const consent = localStorage.getItem('cookie_consent');
+            if (consent === 'accepted') {
+                gtag('consent', 'update', {
+                    'analytics_storage': 'granted'
+                });
+                loadGA4();
+            }
+
+            // Listen for consent changes
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'cookie_consent' && e.newValue === 'accepted') {
+                    gtag('consent', 'update', {
+                        'analytics_storage': 'granted'
+                    });
+                    loadGA4();
+                }
+            });
+
+            function loadGA4() {
+                if (window.ga4Loaded) return; // Prevent duplicate loading
+                window.ga4Loaded = true;
+
+                const script = document.createElement('script');
+                script.async = true;
+                script.src = 'https://www.googletagmanager.com/gtag/js?id={{ GA4_MEASUREMENT_ID }}';
+                document.head.appendChild(script);
+
+                gtag('js', new Date());
+                gtag('config', '{{ GA4_MEASUREMENT_ID }}', {
+                    'send_page_view': true,
+                    'anonymize_ip': true  // GDPR compliance
+                });
+            }
+        })();
+    </script>
+    {% endif %}
+
     <!-- Modern Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -172,10 +223,22 @@
         }
 
         .header-content {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
             align-items: center;
             padding: 1rem 0;
+        }
+
+        .header-content > .logo {
+            justify-self: start;
+        }
+
+        .header-content > nav {
+            justify-self: center;
+        }
+
+        .header-content > div {
+            justify-self: end;
         }
 
         /* Logo - 2025 Enhanced with Icon */
@@ -993,6 +1056,8 @@
                 <div>
                     <p style="margin: 0; color: var(--text-muted); font-size: 0.875rem;">
                         &copy; {% now "Y" %} {{ SITE_NAME|default:"Aishwarya Bhargava" }}. All rights reserved.
+                        <span style="margin: 0 0.5rem;">•</span>
+                        <a href="#" onclick="showPrivacyModal(); return false;" style="color: var(--text-muted); text-decoration: underline; text-underline-offset: 2px;">Privacy Policy</a>
                     </p>
                 </div>
                 <div class="social-links">
@@ -1212,6 +1277,401 @@
             });
         });
     </script>
+
+    <!-- GDPR Cookie Consent Banner -->
+    <div id="cookieConsent" class="cookie-consent" style="display: none;">
+        <div class="cookie-consent-content">
+            <div class="cookie-consent-text">
+                <h3>We Value Your Privacy</h3>
+                <p>We use cookies and analytics to improve your experience. By clicking "Accept", you consent to our use of cookies and Google Analytics. <a href="#" onclick="showPrivacyModal(); return false;" class="cookie-link">Learn more</a></p>
+            </div>
+            <div class="cookie-consent-actions">
+                <button id="cookieAccept" class="cookie-btn cookie-btn-accept">Accept</button>
+                <button id="cookieDecline" class="cookie-btn cookie-btn-decline">Decline</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Privacy Policy Modal -->
+    <div id="privacyModal" class="privacy-modal" style="display: none;">
+        <div class="privacy-modal-overlay" onclick="hidePrivacyModal()"></div>
+        <div class="privacy-modal-content">
+            <div class="privacy-modal-header">
+                <h2>Privacy Policy</h2>
+                <button onclick="hidePrivacyModal()" class="privacy-modal-close">&times;</button>
+            </div>
+            <div class="privacy-modal-body">
+                <h3>Data Collection</h3>
+                <p>We collect and process the following information to improve your experience:</p>
+                <ul>
+                    <li><strong>Analytics Data:</strong> We use Google Analytics to understand how visitors interact with our site. This includes page views, session duration, and navigation patterns.</li>
+                    <li><strong>Cookies:</strong> We use cookies to remember your preferences and track analytics (only with your consent).</li>
+                    <li><strong>IP Address:</strong> Your IP address is collected for visitor counting and analytics purposes.</li>
+                    <li><strong>User Agent:</strong> Browser and device information to optimize the site experience.</li>
+                </ul>
+
+                <h3>How We Use Your Data</h3>
+                <ul>
+                    <li>Analyze site traffic and user behavior</li>
+                    <li>Improve site content and user experience</li>
+                    <li>Track resume downloads (for authenticated users)</li>
+                    <li>Monitor site performance and errors</li>
+                </ul>
+
+                <h3>Your Rights (GDPR)</h3>
+                <p>You have the right to:</p>
+                <ul>
+                    <li>Decline cookie consent</li>
+                    <li>Request deletion of your data</li>
+                    <li>Access the data we've collected about you</li>
+                </ul>
+
+                <h3>Third-Party Services</h3>
+                <p>We use Google Analytics (when you consent) to analyze site usage. Google Analytics may collect and process data according to their privacy policy.</p>
+
+                <h3>Contact</h3>
+                <p>For privacy-related inquiries, please contact: <a href="mailto:{{ CONTACT_EMAIL }}">{{ CONTACT_EMAIL }}</a></p>
+
+                <p style="margin-top: 1.5rem; color: var(--text-muted); font-size: 0.875rem;">
+                    Last updated: {% now "F Y" %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Privacy Policy Modal */
+        .privacy-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .privacy-modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .privacy-modal-content {
+            position: relative;
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            max-width: 700px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
+            animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .privacy-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .privacy-modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .privacy-modal-close {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius);
+            transition: var(--transition);
+        }
+
+        .privacy-modal-close:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .privacy-modal-body {
+            padding: 1.5rem;
+        }
+
+        .privacy-modal-body h3 {
+            margin: 1.5rem 0 0.75rem 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .privacy-modal-body h3:first-child {
+            margin-top: 0;
+        }
+
+        .privacy-modal-body p {
+            margin: 0.5rem 0;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .privacy-modal-body ul {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .privacy-modal-body li {
+            margin: 0.5rem 0;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .privacy-modal-body a {
+            color: var(--text-primary);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .privacy-modal-content {
+                max-height: 90vh;
+            }
+
+            .privacy-modal-header {
+                padding: 1rem;
+            }
+
+            .privacy-modal-body {
+                padding: 1rem;
+            }
+        }
+
+        /* Cookie Consent Banner - GDPR Compliant */
+        .cookie-consent {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+            padding: clamp(1rem, 2vw, 1.5rem);
+            z-index: 10000;
+            animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .cookie-consent-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+            padding-left: max(1rem, env(safe-area-inset-left));
+            padding-right: max(1rem, env(safe-area-inset-right));
+        }
+
+        .cookie-consent-text h3 {
+            font-size: clamp(1rem, 1.5vw, 1.125rem);
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            color: var(--text-primary);
+        }
+
+        .cookie-consent-text p {
+            font-size: clamp(0.875rem, 1.2vw, 0.9375rem);
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .cookie-link {
+            color: var(--text-primary);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            transition: var(--transition);
+        }
+
+        .cookie-link:hover {
+            text-decoration-thickness: 2px;
+        }
+
+        .cookie-consent-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .cookie-btn {
+            padding: 0.625rem 1.5rem;
+            font-size: clamp(0.875rem, 1.2vw, 0.9375rem);
+            font-weight: 500;
+            border-radius: var(--radius);
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .cookie-btn-accept {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+        }
+
+        .cookie-btn-accept:hover {
+            background: var(--text-secondary);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .cookie-btn-decline {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .cookie-btn-decline:hover {
+            background: var(--bg-secondary);
+            border-color: var(--text-secondary);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .cookie-consent-content {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+
+            .cookie-consent-actions {
+                width: 100%;
+            }
+
+            .cookie-btn {
+                flex: 1;
+            }
+        }
+    </style>
+
+    <script>
+        // GDPR Cookie Consent Management
+        (function() {
+            const CONSENT_KEY = 'cookie_consent';
+            const banner = document.getElementById('cookieConsent');
+            const acceptBtn = document.getElementById('cookieAccept');
+            const declineBtn = document.getElementById('cookieDecline');
+
+            // Check if user has already made a choice
+            const savedConsent = localStorage.getItem(CONSENT_KEY);
+
+            if (savedConsent === null) {
+                // No choice made yet, show banner
+                banner.style.display = 'block';
+            } else if (savedConsent === 'accepted') {
+                // User accepted, initialize analytics
+                initializeAnalytics();
+            }
+            // If declined, do nothing (no analytics)
+
+            // Handle Accept button
+            acceptBtn.addEventListener('click', function() {
+                localStorage.setItem(CONSENT_KEY, 'accepted');
+                banner.style.display = 'none';
+                initializeAnalytics();
+            });
+
+            // Handle Decline button
+            declineBtn.addEventListener('click', function() {
+                localStorage.setItem(CONSENT_KEY, 'declined');
+                banner.style.display = 'none';
+            });
+
+            // Initialize analytics when consent is given
+            function initializeAnalytics() {
+                window.analyticsConsent = true;
+
+                // Trigger GA4 consent update (defined in head section)
+                if (typeof gtag === 'function') {
+                    gtag('consent', 'update', {
+                        'analytics_storage': 'granted'
+                    });
+                }
+
+                // Trigger storage event for GA4 to load
+                window.dispatchEvent(new StorageEvent('storage', {
+                    key: CONSENT_KEY,
+                    newValue: 'accepted'
+                }));
+            }
+        })();
+
+        // Global GA4 Event Tracking Helper
+        window.trackGA4Event = function(eventName, eventParams) {
+            // Only track if consent given and GA4 is loaded
+            if (window.analyticsConsent && typeof gtag === 'function') {
+                gtag('event', eventName, eventParams);
+            }
+        };
+
+        // Privacy Modal Functions
+        window.showPrivacyModal = function() {
+            document.getElementById('privacyModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        };
+
+        window.hidePrivacyModal = function() {
+            document.getElementById('privacyModal').style.display = 'none';
+            document.body.style.overflow = ''; // Restore scrolling
+        };
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                hidePrivacyModal();
+            }
+        });
+    </script>
+
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

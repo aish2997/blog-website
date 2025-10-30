@@ -873,6 +873,15 @@
 
 {% block extra_scripts %}
 <script>
+    // Track blog post view in Google Analytics
+    if (window.trackGA4Event) {
+        trackGA4Event('view_blog_post', {
+            'blog_title': '{{ post.title|escapejs }}',
+            'blog_category': '{% for tag in post.tags.all %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endfor %}',
+            'content_type': 'blog_post'
+        });
+    }
+
     // Toggle reply form
     function toggleReplyForm(commentId) {
         const replyForm = document.getElementById(`reply-form-${commentId}`);

@@ -475,10 +475,6 @@
                 <div class="stat-value">{{ total_posts|default:0 }}</div>
                 <div class="stat-label">Blog Posts</div>
             </div>
-            <div class="stat-item">
-                <div class="stat-value">{{ total_visitors|default:0 }}</div>
-                <div class="stat-label">Visitors</div>
-            </div>
         </div>
     </div>
 </section>
@@ -569,67 +565,21 @@
         </div>
 
         <div class="skills-grid">
-            <div class="skill-category">
-                <div class="skill-icon">FE</div>
-                <h3 class="skill-category-title">Frontend</h3>
-                <div class="skill-list">
-                    <span class="skill-item">React</span>
-                    <span class="skill-item">TypeScript</span>
-                    <span class="skill-item">Next.js</span>
-                    <span class="skill-item">Vue.js</span>
-                    <span class="skill-item">Tailwind CSS</span>
+            {% if skill_categories %}
+                {% for category, skills_list in skill_categories.items %}
+                <div class="skill-category">
+                    <div class="skill-icon">{{ skills_list.0.icon|default:category|slice:":2"|upper }}</div>
+                    <h3 class="skill-category-title">{{ category }}</h3>
+                    <div class="skill-list">
+                        {% for skill in skills_list %}
+                        <span class="skill-item">{{ skill.name }}</span>
+                        {% endfor %}
+                    </div>
                 </div>
-            </div>
-
-            <div class="skill-category">
-                <div class="skill-icon">BE</div>
-                <h3 class="skill-category-title">Backend</h3>
-                <div class="skill-list">
-                    <span class="skill-item">Python</span>
-                    <span class="skill-item">Django</span>
-                    <span class="skill-item">Node.js</span>
-                    <span class="skill-item">FastAPI</span>
-                    <span class="skill-item">PostgreSQL</span>
-                </div>
-            </div>
-
-            <div class="skill-category">
-                <div class="skill-icon">☁️</div>
-                <h3 class="skill-category-title">Cloud & DevOps</h3>
-                <div class="skill-list">
-                    <span class="skill-item">Google Cloud</span>
-                    <span class="skill-item">AWS</span>
-                    <span class="skill-item">Docker</span>
-                    <span class="skill-item">Kubernetes</span>
-                    <span class="skill-item">CI/CD</span>
-                </div>
-            </div>
-
-            <div class="skill-category">
-                <div class="skill-icon">🛠</div>
-                <h3 class="skill-category-title">Tools</h3>
-                <div class="skill-list">
-                    <span class="skill-item">Git</span>
-                    <span class="skill-item">VS Code</span>
-                    <span class="skill-item">Figma</span>
-                    <span class="skill-item">Postman</span>
-                    <span class="skill-item">Jira</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- CTA Section -->
-<section class="cta-section">
-    <div class="container">
-        <h2 class="cta-title">Let's Work Together</h2>
-        <p class="cta-description">
-            I'm always interested in hearing about new opportunities and projects
-        </p>
-        <div class="cta-buttons">
-            <a href="mailto:{{ CONTACT_EMAIL|default:'hello@example.com' }}" class="btn">Get In Touch</a>
-            <a href="/cv/" class="btn btn-outline">View Resume</a>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">No skills available yet. Add some in the admin panel!</p>
+            {% endif %}
         </div>
     </div>
 </section>
@@ -663,6 +613,20 @@
                 <a href="{{ TWITTER_URL }}" target="_blank" class="btn btn-outline">Twitter</a>
                 {% endif %}
             </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="container">
+        <h2 class="cta-title">Let's Work Together</h2>
+        <p class="cta-description">
+            I'm always interested in hearing about new opportunities and projects
+        </p>
+        <div class="cta-buttons">
+            <a href="mailto:{{ CONTACT_EMAIL|default:'hello@example.com' }}" class="btn">Get In Touch</a>
+            <a href="/cv/" class="btn btn-outline">View Resume</a>
         </div>
     </div>
 </section>

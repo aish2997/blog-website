@@ -817,6 +817,15 @@
 
 {% block extra_scripts %}
 <script>
+    // Track project view in Google Analytics
+    if (window.trackGA4Event) {
+        trackGA4Event('view_project', {
+            'project_name': '{{ project.name|escapejs }}',
+            'project_status': '{% if project.featured %}featured{% else %}regular{% endif %}',
+            'content_type': 'project'
+        });
+    }
+
     // Lightbox for gallery images
     document.querySelectorAll('.gallery-item').forEach(item => {
         item.addEventListener('click', function() {

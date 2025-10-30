@@ -1,6 +1,6 @@
 from django.contrib import admin
 from markdownx.admin import MarkdownxModelAdmin
-from .models import Project, ProjectCategory, TechnologyStack, ProjectUpdate
+from .models import Project, ProjectCategory, TechnologyStack
 
 
 @admin.register(ProjectCategory)
@@ -109,27 +109,3 @@ class ProjectAdmin(MarkdownxModelAdmin):
             project.update_github_stats()
         self.message_user(request, f"GitHub stats updated for {queryset.count()} projects.")
     update_github_stats.short_description = "Update GitHub statistics"
-
-
-@admin.register(ProjectUpdate)
-class ProjectUpdateAdmin(admin.ModelAdmin):
-    list_display = ['project', 'title', 'update_type', 'version', 'created_at']
-    list_filter = ['update_type', 'created_at', 'project']
-    search_fields = ['title', 'content', 'project__title']
-    date_hierarchy = 'created_at'
-    ordering = ['-created_at']
-
-    fieldsets = (
-        ('Project', {
-            'fields': ('project',)
-        }),
-        ('Update Details', {
-            'fields': ('title', 'content', 'update_type', 'version')
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-
-    readonly_fields = ['created_at', 'updated_at']

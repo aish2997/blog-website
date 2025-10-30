@@ -90,7 +90,6 @@ INSTALLED_APPS = [
     # Third-party apps
     'taggit',
     'markdownx',
-    'hitcount',
     'whitenoise.runserver_nostatic',
     'django_extensions',
     'storages',  # For Google Cloud Storage
@@ -99,7 +98,6 @@ INSTALLED_APPS = [
     'apps.core',
     'apps.blog',
     'apps.projects',
-    'apps.analytics',
     'apps.comments',
 ]
 

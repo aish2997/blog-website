@@ -577,6 +577,14 @@
 
                     if (value) {
                         url.searchParams.set('q', value);
+
+                        // Track search in Google Analytics
+                        if (window.trackGA4Event) {
+                            trackGA4Event('search', {
+                                'search_term': value,
+                                'content_type': 'blog'
+                            });
+                        }
                     } else {
                         url.searchParams.delete('q');
                     }

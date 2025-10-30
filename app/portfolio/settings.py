@@ -55,7 +55,6 @@ INSTALLED_APPS = [
     # Third-party apps
     'taggit',
     'markdownx',
-    'hitcount',
     'django_extensions',
     'whitenoise.runserver_nostatic',
 
@@ -69,7 +68,6 @@ INSTALLED_APPS = [
     'apps.core',
     'apps.blog',
     'apps.projects',
-    'apps.analytics',
     'apps.comments',
 ]
 
@@ -280,6 +278,8 @@ SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True  # Auto-connect social accounts with same email
 
 # Google OAuth Provider Settings
+# NOTE: Client ID and Secret are configured via Django Admin (Social Applications)
+# NOT via settings, to avoid MultipleObjectsReturned errors
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': [
@@ -288,13 +288,6 @@ SOCIALACCOUNT_PROVIDERS = {
         ],
         'AUTH_PARAMS': {
             'access_type': 'online',
-        },
-        'APP': {
-            # These will be configured in Django admin after running migrations
-            # Or set via environment variables:
-            'client_id': env('GOOGLE_OAUTH_CLIENT_ID', default=''),
-            'secret': env('GOOGLE_OAUTH_CLIENT_SECRET', default=''),
-            'key': ''
         },
         'FETCH_USERINFO': True,  # Fetch user info (name, profile picture) from Google
     }

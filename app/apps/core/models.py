@@ -34,20 +34,19 @@ class Profile(models.Model):
 
 class Skill(models.Model):
     """Skills for resume/portfolio"""
-    SKILL_TYPES = (
-        ('language', 'Programming Language'),
-        ('framework', 'Framework'),
-        ('tool', 'Tool'),
-        ('database', 'Database'),
-        ('soft', 'Soft Skill'),
-        ('other', 'Other'),
-    )
 
     name = models.CharField(max_length=100)
-    skill_type = models.CharField(max_length=20, choices=SKILL_TYPES)
+    skill_type = models.CharField(
+        max_length=100,
+        help_text="Category name (e.g., 'Frontend', 'Backend', 'Cloud & DevOps', 'Tools')"
+    )
     proficiency = models.IntegerField(default=50, help_text="Proficiency percentage (0-100)")
-    icon = models.CharField(max_length=100, blank=True, help_text="Font Awesome icon class or image")
-    order = models.IntegerField(default=0, help_text="Display order")
+    icon = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Icon for category display (e.g., '⚛️', '🔧', 'FE', 'BE', or Font Awesome class)"
+    )
+    order = models.IntegerField(default=0, help_text="Display order within category")
     is_featured = models.BooleanField(default=False, help_text="Show on homepage")
 
     created_at = models.DateTimeField(auto_now_add=True)

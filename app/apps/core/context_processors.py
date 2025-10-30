@@ -49,6 +49,7 @@ def site_settings(request):
         'LINKEDIN_URL': context.get('LINKEDIN_URL') or os.environ.get('LINKEDIN_URL', '#'),
         'TWITTER_URL': context.get('TWITTER_URL') or os.environ.get('TWITTER_URL', '#'),
         'CONTACT_EMAIL': context.get('CONTACT_EMAIL') or os.environ.get('EMAIL_CONTACT', ''),
+        'GA4_MEASUREMENT_ID': os.environ.get('GA4_MEASUREMENT_ID', ''),  # Google Analytics 4
     })
 
     # Try to get from settings.SITE_CONFIG if it exists

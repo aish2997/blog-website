@@ -11,7 +11,6 @@ from .models import (
 )
 from apps.blog.models import BlogPost
 from apps.projects.models import Project
-from apps.analytics.models import Visitor
 
 
 class HomeView(TemplateView):
@@ -20,20 +19,6 @@ class HomeView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
-        # Track visitor (session-based to prevent refresh increments)
-        visitor_ip = self.request.META.get('REMOTE_ADDR')
-        session_key = f'visitor_tracked_{visitor_ip}'
-
-        # Check if visitor has been tracked in this session
-        if visitor_ip and not self.request.session.get(session_key):
-            Visitor.objects.get_or_create(
-                ip_address=visitor_ip,
-                defaults={'user_agent': self.request.META.get('HTTP_USER_AGENT', '')}
-            )
-            # Mark visitor as tracked for this session
-            self.request.session[session_key] = True
-            self.request.session.set_expiry(86400)  # Expire after 24 hours
 
         # Get profile
         context['profile'] = Profile.objects.first()
@@ -50,7 +35,15 @@ class HomeView(TemplateView):
         # Get stats
         context['total_posts'] = BlogPost.objects.filter(status='published').count()
         context['total_projects'] = Project.objects.filter(is_public=True).count()
-        context['total_visitors'] = Visitor.objects.count()
+
+        # Get skills for display
+        skills = Skill.objects.all().order_by('skill_type', 'order')
+        skill_categories = {}
+        for skill in skills:
+            if skill.skill_type not in skill_categories:
+                skill_categories[skill.skill_type] = []
+            skill_categories[skill.skill_type].append(skill)
+        context['skill_categories'] = skill_categories
 
         return context
 
@@ -68,7 +61,17 @@ class CVView(TemplateView):
 
         # Get CV view count from CVDownload
         cv_download = CVDownload.objects.filter(is_active=True).first()
+
+        # Track CV views (once per session per 24 hours)
+        if cv_download:
+            session_key = f'cv_viewed_{cv_download.id}'
+            if not self.request.session.get(session_key):
+                cv_download.increment_view_count()
+                self.request.session[session_key] = True
+                self.request.session.set_expiry(86400)  # Expire after 24 hours
+
         context['cv_views'] = cv_download.view_count if cv_download else 0
+        context['cv_downloads'] = cv_download.download_count if cv_download else 0
 
         # Get all CV data
         context['skills'] = Skill.objects.all().order_by('skill_type', 'order')
