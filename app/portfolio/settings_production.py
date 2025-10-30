@@ -11,6 +11,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Initialize environment variables
 env = environ.Env()
 
+# Read .env file if it exists (for local development)
+env_file = BASE_DIR / '.env'
+if env_file.exists():
+    environ.Env.read_env(str(env_file))
+    print(f"✅ Loaded environment variables from {env_file}")
+
 # GCP Project ID
 GCP_PROJECT_ID = os.environ.get('GCP_PROJECT_ID')
 
@@ -73,6 +79,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sitemaps',
     'django.contrib.humanize',
+    'django.contrib.sites',  # Required by django-allauth
+
+    # django-allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 
     # Third-party apps
     'taggit',
@@ -99,6 +112,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',  # Required by django-allauth
 ]
 
 ROOT_URLCONF = 'portfolio.urls'
@@ -124,25 +138,47 @@ TEMPLATES = [
 WSGI_APPLICATION = 'portfolio.wsgi.application'
 
 # Database
-# Using SQLite for production (cost-effective for low-traffic portfolio site)
-# Note: /tmp is the only writable directory in Cloud Run
-DATABASE_PATH = os.environ.get('DATABASE_PATH', '/tmp/db.sqlite3')
+# PostgreSQL for production (using Neon serverless PostgreSQL)
+# Falls back to SQLite for local testing if DATABASE_URL is not set
 
-# Ensure the data directory exists
-import os
-os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
+import dj_database_url
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': DATABASE_PATH,
-        'OPTIONS': {
-            # SQLite timeout setting
-            'timeout': 20,
-            # Note: PRAGMA optimizations are applied via signal in apps.core.apps
+# Check for PostgreSQL connection string (Neon or other PostgreSQL provider)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    # Production: Use PostgreSQL (Neon)
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,  # Connection pooling
+            conn_health_checks=True,  # Check connection health
+            ssl_require=True,  # Require SSL for security
+        )
+    }
+
+    # PostgreSQL-specific settings for better performance
+    # Note: Neon pooler doesn't support statement_timeout in startup parameters
+    DATABASES['default']['OPTIONS'] = {
+        'connect_timeout': 10,
+    }
+else:
+    # Fallback: Use SQLite for local development/testing
+    # Note: /tmp is the only writable directory in Cloud Run
+    DATABASE_PATH = os.environ.get('DATABASE_PATH', '/tmp/db.sqlite3')
+    os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': DATABASE_PATH,
+            'OPTIONS': {
+                'timeout': 20,
+            }
         }
     }
-}
+
+    print("WARNING: Using SQLite database. Set DATABASE_URL environment variable for PostgreSQL.")
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -303,6 +339,10 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+        },
     },
     'handlers': {
         'console': {
@@ -318,6 +358,35 @@ LOGGING = {
         'django': {
             'handlers': ['console'],
             'level': 'INFO',
+            'propagate': False,
+        },
+        # Capture Django request/response errors (including 500 errors)
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        # Capture database query errors
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        # Capture errors in comments app (orphaned comments, admin issues)
+        'apps.comments': {
+            'handlers': ['console'],
+            'level': 'WARNING',  # Capture warnings about orphaned comments
+            'propagate': False,
+        },
+        # Capture errors in blog and projects apps
+        'apps.blog': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'apps.projects': {
+            'handlers': ['console'],
+            'level': 'WARNING',
             'propagate': False,
         },
     },
@@ -337,3 +406,43 @@ SITE_CONFIG = {
 # Email configuration
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@example.com')
+
+# django-allauth Configuration
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# allauth settings
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False
+LOGIN_REDIRECT_URL = '/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'
+
+# Social account settings
+SOCIALACCOUNT_QUERY_EMAIL = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_REQUIRED = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+SOCIALACCOUNT_STORE_TOKENS = True
+
+# Google OAuth provider configuration
+# Note: Client ID and Secret are configured via Django Admin (Social Applications)
+# NOT via settings, to avoid conflicts
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'FETCH_USERINFO': True,
+    }
+}

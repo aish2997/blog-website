@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.fields import GenericRelation
 from django.utils import timezone
 from django.urls import reverse
 from django.utils.text import slugify
@@ -56,6 +57,9 @@ class BlogPost(models.Model):
     tags = TaggableManager(blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='draft')
     is_featured = models.BooleanField(default=False, help_text="Featured posts appear on homepage")
+
+    # Relations
+    comments = GenericRelation('comments.Comment', related_query_name='blogpost')
 
     # SEO
     meta_description = models.CharField(max_length=160, blank=True)

@@ -59,6 +59,21 @@ resource "google_secret_manager_secret" "django_superuser_email" {
   }
 }
 
+# Neon PostgreSQL database connection URL
+resource "google_secret_manager_secret" "neon_database_url" {
+  secret_id = "neon-database-url"
+
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+    purpose     = "database-connection"
+  }
+
+  replication {
+    auto {}
+  }
+}
+
 # Grant the Cloud Run service account access to read these secrets
 resource "google_secret_manager_secret_iam_member" "django_secret_key_access" {
   secret_id = google_secret_manager_secret.django_secret_key.secret_id
@@ -84,6 +99,12 @@ resource "google_secret_manager_secret_iam_member" "django_superuser_email_acces
   member    = "serviceAccount:${data.google_service_account.cloud_run.email}"
 }
 
+resource "google_secret_manager_secret_iam_member" "neon_database_url_access" {
+  secret_id = google_secret_manager_secret.neon_database_url.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${data.google_service_account.cloud_run.email}"
+}
+
 # Output the secret names for reference
 output "secret_instructions" {
   value = <<EOF
@@ -96,6 +117,7 @@ IMPORTANT: After running Terraform, you must manually add secret values in GCP:
    - ${google_secret_manager_secret.django_superuser_username.name}: Your desired admin username
    - ${google_secret_manager_secret.django_superuser_password.name}: A strong password for admin
    - ${google_secret_manager_secret.django_superuser_email.name}: Admin email address
+   - ${google_secret_manager_secret.neon_database_url.name}: Your Neon PostgreSQL connection string (postgresql://...)
 
 3. After adding values, redeploy the Cloud Run service to pick up the secrets
 ================================================================================

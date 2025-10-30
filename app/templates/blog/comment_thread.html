@@ -1,0 +1,99 @@
+<!-- Recursive Comment Thread Template -->
+<div class="comment" id="comment-{{ comment.id }}" data-comment-id="{{ comment.id }}" style="margin-left: {{ depth|default:0|add:'0' }}rem;">
+    <div class="comment-header">
+        <div class="comment-author-info">
+            {% if comment.profile_picture_url %}
+            <img src="{{ comment.profile_picture_url }}" alt="{{ comment.get_author_name }}" class="comment-avatar-img">
+            {% else %}
+            <div class="comment-avatar">
+                {{ comment.get_author_name|first }}
+            </div>
+            {% endif %}
+            <div>
+                <div class="comment-author">{{ comment.get_author_name }}</div>
+                <div class="comment-date">
+                    {{ comment.created_at|date:"F d, Y at g:i A" }}
+                    {% if comment.is_edited %}
+                    <span style="color: #999; font-size: 0.875em;">(edited)</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            {% if comment.is_featured %}
+            <span class="comment-badge">Featured</span>
+            {% endif %}
+            {% if comment.replies.all.count > 0 %}
+            <button class="collapse-btn" onclick="toggleThread({{ comment.id }})" aria-label="Toggle replies">
+                <svg class="collapse-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 18px; height: 18px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+                <span class="reply-count">{{ comment.replies.all.count }} {{ comment.replies.all.count|pluralize:"reply,replies" }}</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="comment-content" id="comment-content-{{ comment.id }}">
+        {{ comment.content|linebreaks }}
+    </div>
+
+    <!-- Edit form (hidden by default) -->
+    <div id="edit-form-{{ comment.id }}" style="display: none; margin-top: 1rem;">
+        <form method="post" action="{% url 'blog:detail' slug=post.slug %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit">
+            <input type="hidden" name="comment_id" value="{{ comment.id }}">
+            <textarea name="content" class="form-textarea" required style="margin-bottom: 0.5rem;">{{ comment.content }}</textarea>
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Save Changes</button>
+                <button type="button" onclick="cancelEdit({{ comment.id }})" style="padding: 0.5rem 1rem; font-size: 0.875rem; background: transparent; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Comment Actions -->
+    <div class="comment-actions">
+        <button class="comment-action-btn" onclick="toggleReplyForm({{ comment.id }})">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+            </svg>
+            Reply
+        </button>
+
+        {% if user.is_authenticated and comment.user == user %}
+        <button class="comment-action-btn" onclick="showEditForm({{ comment.id }})">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            Edit
+        </button>
+        <button class="comment-action-btn" onclick="deleteComment({{ comment.id }})">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            Delete
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Reply Form (hidden by default) -->
+    <div id="reply-form-{{ comment.id }}" style="display: none; margin-top: 1rem;">
+        <form method="post" action="{% url 'blog:detail' slug=post.slug %}">
+            {% csrf_token %}
+            <input type="hidden" name="parent_id" value="{{ comment.id }}">
+            <textarea name="content" class="form-textarea" placeholder="Write your reply..." required style="margin-bottom: 0.5rem;"></textarea>
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Post Reply</button>
+                <button type="button" onclick="toggleReplyForm({{ comment.id }})" style="padding: 0.5rem 1rem; font-size: 0.875rem; background: transparent; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Nested Replies (Recursive) -->
+    <div class="comment-replies" id="replies-{{ comment.id }}">
+        {% for reply in comment.replies.all %}
+            {% include 'blog/comment_thread.html' with comment=reply depth=depth|default:0|add:1 %}
+        {% endfor %}
+    </div>
+</div>

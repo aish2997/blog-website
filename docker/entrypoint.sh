@@ -14,36 +14,57 @@ echo "GCS_BUCKET_STATIC: ${GCS_BUCKET_STATIC}"
 echo "K_SERVICE (Cloud Run): ${K_SERVICE:-Not running on Cloud Run}"
 echo "=================================="
 
+# Detect database type
+if [ -n "$DATABASE_URL" ]; then
+    echo "✅ PostgreSQL database detected (DATABASE_URL is set)"
+    echo "Database: ${DATABASE_URL%%:*}  # Show only the protocol part for security"
+    USE_POSTGRESQL=true
+else
+    echo "⚠️  SQLite database mode (DATABASE_URL not set)"
+    echo "For production, it's recommended to use PostgreSQL via DATABASE_URL"
+    USE_POSTGRESQL=false
+    DATABASE_PATH=${DATABASE_PATH:-/tmp/db.sqlite3}
+fi
+
 # Validate Django configuration
 echo "Validating Django configuration..."
 python manage.py check --deploy 2>&1 || {
     echo "⚠️ Django check reported issues (non-fatal)"
 }
 
-# Database path from environment or default
-DATABASE_PATH=${DATABASE_PATH:-/tmp/db.sqlite3}
-
-# Try to restore database from GCS first (if configured)
-if [ -n "$GCS_BUCKET_MEDIA" ]; then
-    echo "Attempting to restore database from GCS..."
-    python manage.py sync_database --action restore 2>&1 || {
-        echo "Note: Database restore failed or no backup exists (normal for first deployment)"
+# Database initialization - different logic for PostgreSQL vs SQLite
+if [ "$USE_POSTGRESQL" = true ]; then
+    echo "Running database migrations for PostgreSQL..."
+    python manage.py migrate --noinput || {
+        echo "❌ ERROR: Database migrations failed!"
+        echo "Check DATABASE_URL and ensure PostgreSQL is accessible"
+        exit 1
     }
-fi
 
-# Check if database exists after restore attempt
-if [ ! -f "$DATABASE_PATH" ]; then
-    echo "Database not found. Creating new database at $DATABASE_PATH"
-
-    # Run migrations to create database schema
-    echo "Running database migrations..."
-    python manage.py migrate --noinput
+    # Clean orphaned comments (PostgreSQL only - safe to run)
+    echo "Cleaning orphaned comments..."
+    python manage.py clean_orphaned_comments 2>&1 || {
+        echo "Note: Orphaned comments cleanup completed or not needed"
+    }
 else
-    echo "Database found at $DATABASE_PATH"
+    # SQLite-specific logic (backup/restore)
+    # Try to restore database from GCS first (if configured)
+    if [ -n "$GCS_BUCKET_MEDIA" ]; then
+        echo "Attempting to restore database from GCS..."
+        python manage.py sync_database --action restore 2>&1 || {
+            echo "Note: Database restore failed or no backup exists (normal for first deployment)"
+        }
+    fi
 
-    # Still run migrations in case there are new ones
-    echo "Checking for new migrations..."
-    python manage.py migrate --noinput
+    # Check if database exists after restore attempt
+    if [ ! -f "$DATABASE_PATH" ]; then
+        echo "Database not found. Creating new database at $DATABASE_PATH"
+        python manage.py migrate --noinput
+    else
+        echo "Database found at $DATABASE_PATH"
+        echo "Checking for new migrations..."
+        python manage.py migrate --noinput
+    fi
 fi
 
 # ALWAYS check for superuser and create if missing (handles ephemeral database issue)
@@ -79,8 +100,8 @@ except Exception as e:
     if [ "$SUPERUSER_CREATED" = "created" ]; then
         echo "✅ Superuser created successfully"
 
-        # Backup database after creating superuser
-        if [ -n "$GCS_BUCKET_MEDIA" ]; then
+        # Backup database after creating superuser (SQLite only)
+        if [ "$USE_POSTGRESQL" = false ] && [ -n "$GCS_BUCKET_MEDIA" ]; then
             echo "Backing up database with new superuser to GCS..."
             python manage.py sync_database --action backup --force 2>&1 || {
                 echo "Warning: Backup after superuser creation failed"
@@ -99,8 +120,8 @@ else
     echo "   - django-superuser-email"
 fi
 
-# Final backup to ensure latest state is saved
-if [ -n "$GCS_BUCKET_MEDIA" ]; then
+# Final backup to ensure latest state is saved (SQLite only)
+if [ "$USE_POSTGRESQL" = false ] && [ -n "$GCS_BUCKET_MEDIA" ]; then
     echo "Performing final database backup to GCS..."
     python manage.py sync_database --action backup 2>&1 || {
         echo "Note: Final backup skipped (database may be unchanged)"
@@ -138,9 +159,9 @@ echo "Initialization complete."
 # Initialize BACKUP_PID as empty
 BACKUP_PID=""
 
-# Start periodic database backup in background (every 30 minutes)
-if [ -n "$GCS_BUCKET_MEDIA" ]; then
-    echo "Starting periodic database backup service..."
+# Start periodic database backup in background (SQLite only - every 30 minutes)
+if [ "$USE_POSTGRESQL" = false ] && [ -n "$GCS_BUCKET_MEDIA" ]; then
+    echo "Starting periodic database backup service (SQLite)..."
     (
         while true; do
             sleep 1800  # 30 minutes
@@ -150,6 +171,8 @@ if [ -n "$GCS_BUCKET_MEDIA" ]; then
     ) &
     BACKUP_PID=$!
     echo "Database backup service started with PID: $BACKUP_PID"
+else
+    echo "PostgreSQL mode: Periodic backup service not needed (database is persistent)"
 fi
 
 echo "Starting Gunicorn..."
@@ -160,12 +183,27 @@ if [ -n "$BACKUP_PID" ]; then
 fi
 
 # Start the application with gunicorn
-# Using 1 worker for SQLite compatibility (SQLite doesn't handle concurrent writes well)
-# Reduced threads to prevent SQLite lock issues
-exec gunicorn --bind :$PORT \
-    --workers 1 \
-    --threads 2 \
-    --timeout 120 \
-    --access-logfile - \
-    --error-logfile - \
-    portfolio.wsgi:application
+# Configuration depends on database type
+if [ "$USE_POSTGRESQL" = true ]; then
+    # PostgreSQL: Can handle multiple workers and threads efficiently
+    echo "Starting Gunicorn with PostgreSQL-optimized configuration (4 workers, 4 threads)..."
+    exec gunicorn --bind :$PORT \
+        --workers 4 \
+        --threads 4 \
+        --timeout 120 \
+        --access-logfile - \
+        --error-logfile - \
+        --log-level info \
+        portfolio.wsgi:application
+else
+    # SQLite: Limited to 1 worker for write safety
+    echo "Starting Gunicorn with SQLite-compatible configuration (1 worker, 2 threads)..."
+    exec gunicorn --bind :$PORT \
+        --workers 1 \
+        --threads 2 \
+        --timeout 120 \
+        --access-logfile - \
+        --error-logfile - \
+        --log-level info \
+        portfolio.wsgi:application
+fi

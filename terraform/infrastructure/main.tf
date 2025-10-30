@@ -169,9 +169,15 @@ resource "google_cloud_run_service" "portfolio" {
           value = "False"
         }
 
+        # Neon PostgreSQL database URL from Secret Manager
         env {
-          name  = "DATABASE_PATH"
-          value = "/tmp/db.sqlite3"
+          name  = "DATABASE_URL"
+          value_from {
+            secret_key_ref {
+              name = google_secret_manager_secret.neon_database_url.secret_id
+              key  = "latest"
+            }
+          }
         }
       }
     }

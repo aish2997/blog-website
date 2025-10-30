@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sitemaps',
     'django.contrib.humanize',
+    'django.contrib.sites',  # Required by django-allauth
 
     # Third-party apps
     'taggit',
@@ -57,6 +58,12 @@ INSTALLED_APPS = [
     'hitcount',
     'django_extensions',
     'whitenoise.runserver_nostatic',
+
+    # django-allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 
     # Our apps
     'apps.core',
@@ -75,6 +82,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',  # django-allauth middleware
 ]
 
 ROOT_URLCONF = 'portfolio.urls'
@@ -235,3 +243,63 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
+
+# ==============================================================================
+# django-allauth Configuration
+# ==============================================================================
+
+# Required by django-allauth
+SITE_ID = 1
+
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    # Django default (needed for admin login)
+    'django.contrib.auth.backends.ModelBackend',
+
+    # django-allauth specific authentication methods (social login)
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# Allauth settings
+ACCOUNT_AUTHENTICATION_METHOD = 'email'  # Use email instead of username
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # No email verification for now (can be 'mandatory' later)
+ACCOUNT_SIGNUP_EMAIL_ENTER_TWICE = False
+ACCOUNT_SESSION_REMEMBER = True  # Remember user across sessions
+ACCOUNT_UNIQUE_EMAIL = True
+
+# Login/Logout URLs
+LOGIN_REDIRECT_URL = '/'  # Redirect to homepage after login
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'  # Redirect to homepage after logout
+LOGIN_URL = '/accounts/login/'
+
+# Social account settings
+SOCIALACCOUNT_AUTO_SIGNUP = True  # Automatically create account on first Google login
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True  # Auto-connect social accounts with same email
+
+# Google OAuth Provider Settings
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'APP': {
+            # These will be configured in Django admin after running migrations
+            # Or set via environment variables:
+            'client_id': env('GOOGLE_OAUTH_CLIENT_ID', default=''),
+            'secret': env('GOOGLE_OAUTH_CLIENT_SECRET', default=''),
+            'key': ''
+        },
+        'FETCH_USERINFO': True,  # Fetch user info (name, profile picture) from Google
+    }
+}
+
+# Store extra data from social login (Google profile picture, etc.)
+SOCIALACCOUNT_STORE_TOKENS = True
+SOCIALACCOUNT_QUERY_EMAIL = True

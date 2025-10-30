@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.fields import GenericRelation
 from django.utils import timezone
 from django.urls import reverse
 from django.utils.text import slugify
@@ -84,6 +85,9 @@ class Project(models.Model):
     # Technologies
     technologies = models.ManyToManyField(TechnologyStack, blank=True, related_name='projects')
     tags = TaggableManager(blank=True)
+
+    # Relations
+    comments = GenericRelation('comments.Comment', related_query_name='project')
 
     # Media
     featured_image = models.ImageField(upload_to='projects/featured/', blank=True, null=True)

@@ -1,32 +1,41 @@
+import logging
 from django.contrib import admin
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Prefetch
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils import timezone
 from .models import Comment, CommentFlag
 
+logger = logging.getLogger(__name__)
+
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ['author_name', 'content_short', 'content_object_link', 'is_approved',
-                    'is_featured', 'is_spam', 'created_at']
-    list_filter = ['is_approved', 'is_featured', 'is_spam', 'created_at', 'content_type']
-    search_fields = ['author_name', 'author_email', 'content', 'ip_address']
+    list_display = ['user', 'content_short', 'content_object_link', 'is_approved',
+                    'is_featured', 'is_edited', 'is_spam', 'created_at']
+    list_filter = ['is_approved', 'is_featured', 'is_spam', 'is_edited', 'created_at', 'content_type']
+    search_fields = ['user__email', 'user__first_name', 'user__last_name', 'content', 'ip_address']
     list_editable = ['is_approved', 'is_featured', 'is_spam']
     date_hierarchy = 'created_at'
     ordering = ['-created_at']
-    readonly_fields = ['content_type', 'object_id', 'content_object', 'ip_address',
-                       'user_agent', 'created_at', 'updated_at', 'approved_at', 'approved_by']
+    readonly_fields = ['content_type', 'object_id', 'content_object', 'user', 'profile_picture_url',
+                       'ip_address', 'user_agent', 'created_at', 'updated_at', 'edited_at',
+                       'approved_at', 'approved_by']
 
     fieldsets = (
         ('Comment Content', {
-            'fields': ('author_name', 'author_email', 'content', 'parent')
+            'fields': ('user', 'profile_picture_url', 'content', 'parent')
         }),
         ('Related Object', {
             'fields': ('content_type', 'object_id', 'content_object'),
         }),
         ('Moderation', {
             'fields': ('is_approved', 'is_featured', 'is_spam', 'approved_at', 'approved_by')
+        }),
+        ('Edit History', {
+            'fields': ('is_edited', 'edited_at'),
+            'classes': ('collapse',)
         }),
         ('Tracking', {
             'fields': ('ip_address', 'user_agent'),
@@ -44,8 +53,23 @@ class CommentAdmin(admin.ModelAdmin):
     content_short.short_description = 'Comment'
 
     def content_object_link(self, obj):
-        """Link to the commented object"""
-        if obj.content_object:
+        """Link to the commented object with safe null handling"""
+        try:
+            # Check if content_object exists (not deleted)
+            if obj.content_object is None:
+                # Orphaned comment - parent object was deleted
+                model_name = obj.content_type.model if obj.content_type else 'Unknown'
+                logger.warning(
+                    f"Orphaned comment detected: Comment ID {obj.id} references "
+                    f"deleted {model_name} with ID {obj.object_id}"
+                )
+                return format_html(
+                    '<span style="color: #999; font-style: italic;">[Deleted {} #{}]</span>',
+                    model_name.title(),
+                    obj.object_id
+                )
+
+            # Valid content_object exists
             app_label = obj.content_type.app_label
             model_name = obj.content_type.model
 
@@ -53,16 +77,59 @@ class CommentAdmin(admin.ModelAdmin):
             try:
                 url = reverse(f'admin:{app_label}_{model_name}_change', args=[obj.object_id])
                 return format_html('<a href="{}">{}</a>', url, str(obj.content_object))
-            except:
-                return str(obj.content_object)
-        return '-'
+            except Exception as e:
+                # URL reverse failed (model not registered in admin)
+                logger.debug(
+                    f"Could not generate admin URL for {model_name} #{obj.object_id}: {e}"
+                )
+                return format_html('{}', str(obj.content_object))
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            logger.error(
+                f"Unexpected error in content_object_link for Comment ID {obj.id}: {e}",
+                exc_info=True
+            )
+            return format_html(
+                '<span style="color: red;">[Error: {}]</span>',
+                str(e)[:50]
+            )
     content_object_link.short_description = 'Commented On'
 
     def get_queryset(self, request):
-        """Optimize queryset"""
-        return super().get_queryset(request).select_related(
-            'content_type', 'parent', 'approved_by'
+        """
+        Optimize queryset to prevent N+1 queries.
+
+        Uses select_related for ForeignKey fields and intelligent prefetching
+        for GenericForeignKey content_object field.
+        """
+        queryset = super().get_queryset(request).select_related(
+            'content_type',
+            'parent',
+            'approved_by',
+            'user'  # Added user for new authenticated model
         )
+
+        # Prefetch content_object for BlogPost and Project
+        # Django will automatically fetch these based on content_type
+        # This reduces queries from N to approximately 3 (one per content type)
+        from apps.blog.models import BlogPost
+        from apps.projects.models import Project
+
+        # Get all unique content type IDs in this queryset
+        # Django's ORM will intelligently fetch only the needed objects
+        queryset = queryset.prefetch_related(
+            Prefetch(
+                'content_object',
+                queryset=BlogPost.objects.select_related('author', 'category')
+            ),
+            Prefetch(
+                'content_object',
+                queryset=Project.objects.select_related('author', 'category')
+            ),
+        )
+
+        return queryset
 
     def save_model(self, request, obj, form, change):
         """Set approved_by when approving comment"""
@@ -112,11 +179,6 @@ class CommentAdmin(admin.ModelAdmin):
         updated = queryset.update(is_featured=False)
         self.message_user(request, f"{updated} comments have been unfeatured.")
     unfeature_comments.short_description = "Unfeature selected comments"
-
-    class Media:
-        css = {
-            'all': ('admin/css/comments_admin.css',)
-        }
 
 
 @admin.register(CommentFlag)

@@ -36,6 +36,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('markdownx/', include('markdownx.urls')),  # For markdown editor
 
+    # django-allauth URLs (Google Sign-In)
+    path('accounts/', include('allauth.urls')),
+
     # App URLs
     path('', include('apps.core.urls')),
     path('blog/', include('apps.blog.urls')),

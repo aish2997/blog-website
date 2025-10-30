@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign In Cancelled - {{ block.super }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .auth-container {
+        min-height: calc(100vh - 80px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        background: var(--bg-primary);
+    }
+
+    .auth-card {
+        width: 100%;
+        max-width: 480px;
+        padding: 3.5rem 2.5rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .cancelled-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 1.5rem;
+        background: rgba(107, 114, 128, 0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .cancelled-icon svg {
+        width: 32px;
+        height: 32px;
+        color: var(--text-secondary);
+    }
+
+    .auth-brand h1 {
+        font-size: 2.25rem;
+        font-weight: 800;
+        margin: 0 0 0.75rem 0;
+        color: var(--text-primary);
+        letter-spacing: -0.03em;
+    }
+
+    .auth-subtitle {
+        font-size: 1.0625rem;
+        color: var(--text-secondary);
+        margin: 0 0 2.5rem 0;
+        line-height: 1.6;
+    }
+
+    .auth-buttons {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .btn-primary {
+        flex: 1;
+        padding: 14px 24px;
+        background: var(--accent);
+        color: var(--bg-primary);
+        border: 2px solid var(--accent);
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-secondary {
+        flex: 1;
+        padding: 14px 24px;
+        background: transparent;
+        color: var(--text-primary);
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-secondary:hover {
+        background: var(--bg-secondary);
+        border-color: var(--text-primary);
+        transform: translateY(-1px);
+    }
+
+    @media (max-width: 768px) {
+        .auth-card {
+            padding: 2.5rem 1.75rem;
+        }
+
+        .auth-brand h1 {
+            font-size: 1.875rem;
+        }
+
+        .auth-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="cancelled-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </div>
+
+        <div class="auth-brand">
+            <h1>Sign In Cancelled</h1>
+            <p class="auth-subtitle">You chose not to sign in. No worries, you can try again anytime!</p>
+        </div>
+
+        <div class="auth-buttons">
+            <a href="{% url 'account_login' %}" class="btn-primary">Try Again</a>
+            <a href="/" class="btn-secondary">Go Home</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

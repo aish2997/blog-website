@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign Out - {{ block.super }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .auth-container {
+        min-height: calc(100vh - 80px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        background: var(--bg-primary);
+    }
+
+    .auth-card {
+        width: 100%;
+        max-width: 440px;
+        padding: 3.5rem 2.5rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .auth-brand h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin: 0 0 0.75rem 0;
+        color: var(--text-primary);
+        letter-spacing: -0.03em;
+    }
+
+    .auth-subtitle {
+        font-size: 1.0625rem;
+        color: var(--text-secondary);
+        margin: 0 0 2.5rem 0;
+        line-height: 1.6;
+    }
+
+    .auth-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .btn-logout {
+        flex: 1;
+        padding: 14px 24px;
+        background: var(--accent);
+        color: var(--bg-primary);
+        border: 2px solid var(--accent);
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-logout:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-cancel {
+        flex: 1;
+        padding: 14px 24px;
+        background: transparent;
+        color: var(--text-primary);
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-cancel:hover {
+        background: var(--bg-secondary);
+        border-color: var(--text-primary);
+        transform: translateY(-1px);
+    }
+
+    .user-info {
+        margin-bottom: 2rem;
+        padding: 1.25rem;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+    }
+
+    .user-info-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        margin: 0 auto 0.75rem;
+        background: var(--accent);
+        color: var(--bg-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .user-info-name {
+        font-size: 1.0625rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .user-info-email {
+        font-size: 0.9375rem;
+        color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+        .auth-card {
+            padding: 2.5rem 1.75rem;
+        }
+
+        .auth-brand h1 {
+            font-size: 2rem;
+        }
+
+        .auth-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-brand">
+            <h1>Sign Out</h1>
+            <p class="auth-subtitle">Are you sure you want to sign out?</p>
+        </div>
+
+        {% if user.is_authenticated %}
+        <div class="user-info">
+            {% if user.socialaccount_set.all.0.extra_data.picture %}
+            <img src="{{ user.socialaccount_set.all.0.extra_data.picture }}"
+                 alt="{{ user.get_full_name }}"
+                 class="user-info-avatar"
+                 style="width: 56px; height: 56px; object-fit: cover;">
+            {% else %}
+            <div class="user-info-avatar">
+                {{ user.get_full_name|first|default:user.username|first }}
+            </div>
+            {% endif %}
+            <div class="user-info-name">{{ user.get_full_name|default:user.username }}</div>
+            <div class="user-info-email">{{ user.email }}</div>
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'account_logout' %}">
+            {% csrf_token %}
+            {% if redirect_field_value %}
+            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}"/>
+            {% endif %}
+            <div class="auth-buttons">
+                <button type="submit" class="btn-logout">Yes, Sign Out</button>
+                <a href="/" class="btn-cancel">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
