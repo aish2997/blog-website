@@ -47,7 +47,7 @@
         padding: 0.5rem 1rem;
         background: transparent;
         border: 1px solid var(--border);
-        border-radius: 99px;
+        border-radius: var(--radius-sm);
         color: var(--text-secondary);
         text-decoration: none;
         font-size: 0.9rem;
@@ -92,7 +92,7 @@
         left: 0;
         right: 0;
         height: 3px;
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(90deg, var(--text-primary) 0%, var(--text-secondary) 100%);
         transform: scaleX(0);
         transform-origin: left;
         transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -102,7 +102,7 @@
     .project-card:hover {
         transform: translateY(-8px);
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.18);
-        border-color: rgba(102, 126, 234, 0.25);
+        border-color: var(--border);
     }
 
     .project-card:hover::before {
@@ -112,7 +112,7 @@
     .project-thumbnail {
         width: 100%;
         height: 250px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
         position: relative;
         overflow: hidden;
     }
@@ -161,8 +161,8 @@
         right: 1rem;
         padding: 0.5rem 1rem;
         background: rgba(255, 255, 255, 0.95);
-        color: #667eea;
-        border-radius: 99px;
+        color: var(--text-primary);
+        border-radius: var(--radius-sm);
         font-size: 0.75rem;
         font-weight: 600;
         text-transform: uppercase;
@@ -179,7 +179,7 @@
 
     .project-card:hover .project-featured-badge {
         transform: scale(1.05);
-        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     }
 
     .project-content {
@@ -199,7 +199,7 @@
     }
 
     .project-card:hover .project-name {
-        color: #667eea;
+        color: var(--text-primary);
     }
 
     .project-description {
@@ -231,8 +231,8 @@
     }
 
     .project-card:hover .tech-badge {
-        background: rgba(102, 126, 234, 0.12);
-        color: #667eea;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
         transform: translateY(-1px);
     }
 
@@ -267,7 +267,7 @@
     }
 
     .project-link:hover {
-        color: #667eea;
+        color: var(--text-primary);
         transform: translateY(-1px);
     }
 
