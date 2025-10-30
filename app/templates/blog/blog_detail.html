@@ -9,11 +9,13 @@
         box-sizing: border-box;
     }
 
-    /* Article Container */
+    /* Article Container - Optimized for readability */
     .article-container {
-        max-width: 750px;
+        max-width: min(75ch, 90%);
         margin: 0 auto;
-        padding: 2rem 24px;
+        padding: clamp(1.5rem, 3vw, 2.5rem) clamp(1rem, 4vw, 2rem);
+        padding-left: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-left));
+        padding-right: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-right));
         width: 100%;
         display: block;
         position: relative;
@@ -123,10 +125,10 @@
         object-fit: cover;
     }
 
-    /* Article Content Styling */
+    /* Article Content Styling - Fluid Typography */
     .article-content {
-        font-size: 1.125rem;
-        line-height: 1.8;
+        font-size: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+        line-height: 1.75;
         color: var(--text-secondary);
     }
 
@@ -350,45 +352,48 @@
         font-size: 0.875rem;
     }
 
-    /* Comments Section */
+    /* Comments Section - 2025 Minimalist with Better Spacing */
     .comments-section {
-        margin-top: 4rem;
-        padding-top: 3rem;
+        margin-top: clamp(2.5rem, 4vw, 3.5rem);
+        padding-top: clamp(2rem, 3vw, 2.5rem);
         border-top: 1px solid var(--border);
+        max-width: min(75ch, 90%);
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .comments-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
     }
 
     .comments-title {
-        font-size: 1.75rem;
-        font-weight: 700;
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
     }
 
     .comments-count {
-        background: var(--bg-secondary);
-        padding: 0.25rem 0.75rem;
-        border-radius: 99px;
-        font-size: 0.875rem;
-        color: var(--text-secondary);
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        font-weight: 500;
     }
 
-    /* Comment Form */
+    /* Comment Form - 2025 Minimalist */
     .comment-form {
         background: var(--bg-secondary);
-        padding: 2rem;
+        padding: 1.5rem;
         border-radius: var(--radius-md);
-        margin-bottom: 3rem;
+        margin-bottom: 2rem;
     }
 
     .comment-form-title {
-        font-size: 1.25rem;
+        font-size: 1.125rem;
         font-weight: 600;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
+        letter-spacing: -0.01em;
     }
 
     .form-row {
@@ -474,55 +479,59 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 1rem;
+        margin-bottom: 0.625rem;
     }
 
     .comment-author-info {
         display: flex;
-        align-items: center;
-        gap: 0.75rem;
+        align-items: flex-start;
+        gap: 0.625rem;
     }
 
     .comment-avatar {
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         background: var(--bg-secondary);
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: 600;
+        font-size: 0.75rem;
         color: var(--text-secondary);
         flex-shrink: 0;
+        border: 1px solid var(--border);
     }
 
     .comment-avatar-img {
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         object-fit: cover;
         flex-shrink: 0;
+        border: 1px solid var(--border);
     }
 
     .comment-actions {
         display: flex;
-        gap: 0.75rem;
-        margin-top: 0.75rem;
-        margin-left: 3.25rem;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        margin-left: 2.625rem;
     }
 
     .comment-action-btn {
         background: transparent;
         border: none;
         color: var(--text-muted);
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         cursor: pointer;
         padding: 0.25rem 0.5rem;
-        border-radius: 4px;
+        border-radius: var(--radius);
         transition: var(--transition);
         display: flex;
         align-items: center;
-        gap: 0.25rem;
+        gap: 0.375rem;
+        font-weight: 500;
     }
 
     .comment-action-btn:hover {
@@ -531,8 +540,8 @@
     }
 
     .comment-action-btn svg {
-        width: 14px;
-        height: 14px;
+        width: 13px;
+        height: 13px;
     }
 
     .collapse-btn {
@@ -540,22 +549,25 @@
         align-items: center;
         gap: 0.375rem;
         background: transparent;
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        padding: 0.375rem 0.75rem;
-        font-size: 0.8125rem;
-        color: var(--text-secondary);
+        border: none;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        color: var(--text-muted);
         cursor: pointer;
         transition: var(--transition);
+        border-radius: var(--radius);
+        font-weight: 500;
     }
 
     .collapse-btn:hover {
         background: var(--bg-secondary);
-        border-color: var(--text-muted);
+        color: var(--text-primary);
     }
 
     .collapse-btn .collapse-icon {
         transition: transform 0.2s ease;
+        width: 14px;
+        height: 14px;
     }
 
     .collapse-btn.collapsed .collapse-icon {
@@ -567,9 +579,9 @@
     }
 
     .comment-replies {
-        margin-top: 1.5rem;
-        border-left: 2px solid var(--border);
-        padding-left: 1.5rem;
+        margin-top: 1rem;
+        border-left: 1px solid var(--border);
+        padding-left: 1rem;
         transition: all 0.3s ease;
     }
 
@@ -579,40 +591,45 @@
 
     .comment {
         position: relative;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.25rem;
     }
 
     .comment-author {
         font-weight: 600;
+        font-size: 0.875rem;
         color: var(--text-primary);
+        letter-spacing: -0.01em;
     }
 
     .comment-date {
-        font-size: 0.875rem;
+        font-size: 0.75rem;
         color: var(--text-muted);
+        font-weight: 500;
     }
 
     .comment-badge {
-        padding: 0.25rem 0.75rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        padding: 0.1875rem 0.625rem;
+        background: var(--text-primary);
+        color: var(--bg-primary);
         border-radius: 99px;
-        font-size: 0.75rem;
+        font-size: 0.6875rem;
         font-weight: 600;
         text-transform: uppercase;
+        letter-spacing: 0.025em;
     }
 
     .comment-content {
-        margin-left: 3.25rem;
+        margin-left: 2.625rem;
         color: var(--text-secondary);
         line-height: 1.6;
+        font-size: 0.9375rem;
     }
 
     .comment-reply {
-        margin-left: 3.25rem;
-        margin-top: 1.5rem;
-        padding-left: 1.5rem;
-        border-left: 2px solid var(--border);
+        margin-left: 2.625rem;
+        margin-top: 1rem;
+        padding-left: 1rem;
+        border-left: 1px solid var(--border);
     }
 
     /* Navigation */

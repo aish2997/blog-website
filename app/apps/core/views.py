@@ -1,6 +1,10 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, JsonResponse
 from django.views.generic import TemplateView, View
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
+from django.core.mail import send_mail
+from django.conf import settings
 from .models import (
     Profile, Skill, Education, WorkExperience,
     Certification, Achievement, CVDownload
@@ -84,11 +88,12 @@ class CVView(TemplateView):
         return context
 
 
-class CVDownloadView(View):
-    """Handle CV PDF downloads"""
+class CVDownloadView(LoginRequiredMixin, View):
+    """Handle CV PDF downloads - requires Google authentication"""
+    login_url = '/accounts/login/'
 
     def get(self, request):
-        """Handle CV download with proper storage backend support"""
+        """Handle CV download with authentication and email notification"""
         import logging
         logger = logging.getLogger(__name__)
 
@@ -96,11 +101,63 @@ class CVDownloadView(View):
             cv_download = CVDownload.objects.filter(is_active=True).first()
 
             if not cv_download or not cv_download.file:
-                # If no CV file, redirect to CV page
+                messages.error(request, 'CV file not available.')
                 return redirect('core:cv')
+
+            # Get user information
+            user = request.user
+            user_name = user.get_full_name() or user.username
+            user_email = user.email
+
+            # Get profile picture from Google OAuth if available
+            profile_picture_url = ''
+            try:
+                social_account = user.socialaccount_set.filter(provider='google').first()
+                if social_account and social_account.extra_data:
+                    profile_picture_url = social_account.extra_data.get('picture', '')
+            except Exception:
+                pass
 
             # Track download
             cv_download.increment_download_count()
+
+            # Send email notification to site owner
+            try:
+                from django.utils import timezone
+                download_time = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                email_subject = f'Resume Downloaded by {user_name}'
+                email_body = f"""
+Hello,
+
+Your resume has been downloaded!
+
+Downloaded by: {user_name}
+Email: {user_email}
+Time: {download_time}
+Total Downloads: {cv_download.download_count}
+
+User Profile Picture: {profile_picture_url if profile_picture_url else 'N/A'}
+
+---
+This is an automated notification from your portfolio website.
+                """.strip()
+
+                # Send email (make sure to configure email settings)
+                recipient_email = getattr(settings, 'ADMIN_EMAIL', getattr(settings, 'CONTACT_EMAIL', None))
+
+                if recipient_email:
+                    send_mail(
+                        subject=email_subject,
+                        message=email_body,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[recipient_email],
+                        fail_silently=True,  # Don't break download if email fails
+                    )
+                    logger.info(f"Email notification sent for CV download by {user_email}")
+            except Exception as e:
+                logger.error(f"Failed to send email notification: {e}")
+                # Continue with download even if email fails
 
             # Handle both local and cloud storage
             try:
@@ -109,16 +166,23 @@ class CVDownloadView(View):
                 response = HttpResponse(file_content, content_type='application/pdf')
                 filename = f"CV_{cv_download.version}.pdf"
                 response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+                # Add success message
+                messages.success(request, f'Resume downloaded successfully! Thank you, {user_name}.')
+
                 return response
             except Exception as e:
                 # If direct read fails, try URL redirect (for GCS public URLs)
                 if hasattr(cv_download.file, 'url'):
+                    messages.success(request, f'Resume downloaded successfully! Thank you, {user_name}.')
                     return redirect(cv_download.file.url)
                 logger.error(f"Could not access CV file: {e}")
+                messages.error(request, 'Error accessing CV file.')
                 return redirect('core:cv')
 
         except Exception as e:
             logger.error(f"Error in CVDownloadView: {e}")
+            messages.error(request, 'An error occurred while downloading the resume.')
             return redirect('core:cv')
 
 

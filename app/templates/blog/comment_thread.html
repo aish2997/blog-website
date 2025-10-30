@@ -40,7 +40,7 @@
 
     <!-- Edit form (hidden by default) -->
     <div id="edit-form-{{ comment.id }}" style="display: none; margin-top: 1rem;">
-        <form method="post" action="{% url 'blog:detail' slug=post.slug %}">
+        <form method="post" action="{% if post %}{% url 'blog:detail' slug=post.slug %}{% else %}{% url 'projects:detail' slug=project.slug %}{% endif %}">
             {% csrf_token %}
             <input type="hidden" name="action" value="edit">
             <input type="hidden" name="comment_id" value="{{ comment.id }}">
@@ -79,7 +79,7 @@
 
     <!-- Reply Form (hidden by default) -->
     <div id="reply-form-{{ comment.id }}" style="display: none; margin-top: 1rem;">
-        <form method="post" action="{% url 'blog:detail' slug=post.slug %}">
+        <form method="post" action="{% if post %}{% url 'blog:detail' slug=post.slug %}{% else %}{% url 'projects:detail' slug=project.slug %}{% endif %}">
             {% csrf_token %}
             <input type="hidden" name="parent_id" value="{{ comment.id }}">
             <textarea name="content" class="form-textarea" placeholder="Write your reply..." required style="margin-bottom: 0.5rem;"></textarea>
@@ -93,7 +93,7 @@
     <!-- Nested Replies (Recursive) -->
     <div class="comment-replies" id="replies-{{ comment.id }}">
         {% for reply in comment.replies.all %}
-            {% include 'blog/comment_thread.html' with comment=reply depth=depth|default:0|add:1 %}
+            {% include 'blog/comment_thread.html' with comment=reply depth=depth|default:0|add:1 post=post project=project %}
         {% endfor %}
     </div>
 </div>

@@ -6,9 +6,9 @@
 <style>
     /* Hero Section */
     .projects-hero {
-        padding: 6rem 0 3rem;
-        margin-top: 20px;
-        background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+        padding: 5rem 0 2.5rem;
+        margin-top: 0;
+        background: var(--bg-primary);
         border-bottom: 1px solid var(--border);
     }
 
@@ -72,13 +72,13 @@
         padding: 4rem 0;
     }
 
-    /* Project Card */
+    /* Project Card - 2025 Enhanced Design */
     .project-card {
         background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: var(--radius-lg);
         overflow: hidden;
-        transition: var(--transition);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
         display: flex;
         flex-direction: column;
@@ -94,13 +94,15 @@
         height: 3px;
         background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
         transform: scaleX(0);
-        transition: transform 0.3s ease;
+        transform-origin: left;
+        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1;
     }
 
     .project-card:hover {
         transform: translateY(-8px);
-        box-shadow: var(--shadow-xl);
-        border-color: transparent;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.18);
+        border-color: rgba(102, 126, 234, 0.25);
     }
 
     .project-card:hover::before {
@@ -115,15 +117,29 @@
         overflow: hidden;
     }
 
+    .project-thumbnail::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, transparent 40%, rgba(0, 0, 0, 0.5) 100%);
+        opacity: 0;
+        transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .project-card:hover .project-thumbnail::after {
+        opacity: 1;
+    }
+
     .project-thumbnail img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        transition: var(--transition);
+        transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1), filter 0.4s ease;
     }
 
     .project-card:hover .project-thumbnail img {
-        transform: scale(1.1);
+        transform: scale(1.12);
+        filter: brightness(1.08) contrast(1.05);
     }
 
     .project-thumbnail-placeholder {
@@ -151,10 +167,19 @@
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 2;
     }
 
     [data-theme="dark"] .project-featured-badge {
         background: rgba(0, 0, 0, 0.95);
+    }
+
+    .project-card:hover .project-featured-badge {
+        transform: scale(1.05);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
     }
 
     .project-content {
@@ -170,6 +195,11 @@
         margin-bottom: 1rem;
         color: var(--text-primary);
         line-height: 1.2;
+        transition: color 0.3s ease;
+    }
+
+    .project-card:hover .project-name {
+        color: #667eea;
     }
 
     .project-description {
@@ -197,12 +227,19 @@
         font-size: 0.8rem;
         color: var(--text-secondary);
         font-weight: 500;
-        transition: var(--transition);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .project-card:hover .tech-badge {
+        background: rgba(102, 126, 234, 0.12);
+        color: #667eea;
+        transform: translateY(-1px);
+    }
+
+    .tech-badge:hover {
         background: var(--accent);
         color: var(--bg-primary);
+        transform: translateY(-2px) scale(1.05);
     }
 
     .project-footer {
@@ -226,11 +263,20 @@
         text-decoration: none;
         font-size: 0.9rem;
         font-weight: 500;
-        transition: var(--transition);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .project-link:hover {
-        color: var(--text-primary);
+        color: #667eea;
+        transform: translateY(-1px);
+    }
+
+    .project-link svg {
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .project-link:hover svg {
+        transform: translateX(2px);
     }
 
     .project-stats {
@@ -492,6 +538,30 @@
                 card.style.transform = 'translateY(0)';
             }, index * 100);
         });
+
+        // Real-time search functionality
+        const searchInput = document.querySelector('.search-input');
+        if (searchInput) {
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    const value = e.target.value.trim();
+                    const url = new URL(window.location.href);
+
+                    if (value) {
+                        url.searchParams.set('q', value);
+                    } else {
+                        url.searchParams.delete('q');
+                    }
+
+                    // Remove page and tech parameters when searching
+                    url.searchParams.delete('page');
+
+                    window.location.href = url.toString();
+                }, 500); // 500ms debounce
+            });
+        }
     });
 </script>
 {% endblock %}
