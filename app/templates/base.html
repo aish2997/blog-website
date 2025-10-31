@@ -241,48 +241,43 @@
             justify-self: end;
         }
 
-        /* Logo - 2025 Enhanced with Icon */
+        /* Logo - Developer Themed */
         .logo {
             display: inline-flex;
             align-items: center;
-            gap: 0.625rem;
-            font-size: 1.25rem;
-            font-weight: 700;
-            letter-spacing: -0.03em;
+            gap: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: var(--font-mono);
             color: var(--text-primary);
             text-decoration: none;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-origin: left center;
+            padding: 0.4rem 0.75rem;
+            border-radius: var(--radius);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
         }
 
-        /* Minimal Logo Icon - Outlined Border Only */
-        .logo::before {
-            content: '';
-            width: 32px;
-            height: 32px;
-            background: transparent;
-            border: 2px solid var(--text-primary);
-            border-radius: var(--radius);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            flex-shrink: 0;
+        .logo .logo-bracket {
+            color: var(--accent-secondary);
+            font-weight: 700;
+        }
+
+        .logo .logo-initials {
+            color: var(--text-primary);
+            margin: 0 0.15rem;
+            font-weight: 700;
         }
 
         .logo:hover {
-            opacity: 1;
+            background: var(--bg-card);
+            border-color: var(--accent-secondary);
             transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
-        .logo:hover::before {
-            transform: rotate(-5deg) scale(1.05);
-            background: var(--text-primary);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        [data-theme="dark"] .logo:hover::before {
-            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+        [data-theme="dark"] .logo:hover {
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
         }
 
         /* Navigation - 2025 Enhanced */
@@ -476,8 +471,8 @@
             background: var(--bg-secondary);
             border: 1px solid var(--border);
             border-radius: var(--radius);
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -487,10 +482,14 @@
         }
 
         .theme-toggle:hover {
-            background: var(--text-primary);
-            color: var(--bg-primary);
-            border-color: var(--text-primary);
-            transform: scale(1.05) rotate(15deg);
+            background: var(--bg-card);
+            border-color: var(--accent-secondary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme="dark"] .theme-toggle:hover {
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
         }
 
         .theme-toggle svg {
@@ -506,20 +505,22 @@
             border-radius: var(--radius);
             cursor: pointer;
             padding: 0.5rem;
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             align-items: center;
             justify-content: center;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .mobile-menu-toggle:hover {
-            background: var(--text-primary);
-            border-color: var(--text-primary);
+            background: var(--bg-card);
+            border-color: var(--accent-secondary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
-        .mobile-menu-toggle:hover span {
-            background: var(--bg-primary);
+        [data-theme="dark"] .mobile-menu-toggle:hover {
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
         }
 
         .mobile-menu-toggle span {
@@ -836,11 +837,8 @@
                 position: absolute;
                 left: 50%;
                 transform: translateX(-50%);
-                text-align: center;
-                max-width: 60%;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
+                font-size: 0.9rem;
+                padding: 0.35rem 0.6rem;
             }
 
             nav {
@@ -975,7 +973,9 @@
     <header id="header">
         <div class="container">
             <div class="header-content">
-                <a href="/" class="logo">{{ SITE_NAME|default:"Aishwarya Bhargava" }}</a>
+                <a href="/" class="logo">
+                    <span class="logo-bracket">&lt;</span><span class="logo-initials">AB</span><span class="logo-bracket">/&gt;</span>
+                </a>
 
                 <nav id="navigation">
                     <button class="nav-close-btn" onclick="toggleMobileMenu()" aria-label="Close menu">
