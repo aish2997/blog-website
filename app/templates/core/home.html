@@ -1,104 +1,94 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ block.super }}{% endblock %}
+
 {% block extra_head %}
 <style>
-    /* Hero Section */
+    /* Hero Section - AI Engineer Edition */
     .hero {
+        position: relative;
         min-height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
-        position: relative;
+        padding: var(--spacing-xl) var(--spacing-md);
         overflow: hidden;
-        background: var(--bg-primary);
-    }
-
-    .hero-background {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        opacity: 0.1;
-        background-image:
-            repeating-linear-gradient(90deg, var(--text-primary) 0, var(--text-primary) 1px, transparent 1px, transparent 80px),
-            repeating-linear-gradient(0deg, var(--text-primary) 0, var(--text-primary) 1px, transparent 1px, transparent 80px);
-    }
-
-    [data-theme="dark"] .hero-background {
-        opacity: 0.15;
-        background-image:
-            repeating-linear-gradient(90deg, #ffffff 0, #ffffff 1px, transparent 1px, transparent 80px),
-            repeating-linear-gradient(0deg, #ffffff 0, #ffffff 1px, transparent 1px, transparent 80px);
     }
 
     .hero-content {
-        position: relative;
-        z-index: 1;
-        text-align: center;
-        padding: clamp(1.5rem, 4vw, 3rem) clamp(1.5rem, 5vw, 2.5rem);
-        padding-left: max(clamp(1.5rem, 5vw, 2.5rem), env(safe-area-inset-left));
-        padding-right: max(clamp(1.5rem, 5vw, 2.5rem), env(safe-area-inset-right));
-        padding-top: max(clamp(1.5rem, 4vw, 3rem), env(safe-area-inset-top));
-        padding-bottom: max(clamp(1.5rem, 4vw, 3rem), env(safe-area-inset-bottom));
         max-width: 1200px;
-        margin: 0 auto;
+        width: 100%;
+        text-align: center;
+        z-index: 1;
     }
 
-    .hero-greeting {
-        font-size: 1.125rem;
-        color: var(--text-muted);
-        font-weight: 500;
-        letter-spacing: 0.05em;
-        margin-bottom: 1rem;
-        opacity: 0;
-        animation: fadeInUp 0.8s ease forwards;
+    .hero-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1.5rem;
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--border-glass);
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+        animation: fadeInDown 0.8s ease-out;
+    }
+
+    .hero-label-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--accent-primary);
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.2); }
     }
 
     .hero-title {
-        font-size: clamp(2.5rem, 8vw, 5rem);
-        font-weight: 900;
+        font-size: var(--font-size-4xl);
+        font-weight: 700;
         line-height: 1.1;
-        letter-spacing: -0.04em;
         margin-bottom: 1.5rem;
-        opacity: 0;
-        animation: fadeInUp 0.8s ease 0.2s forwards;
-        /* Ensure text doesn't touch edges */
-        padding: 0 clamp(0.5rem, 2vw, 1rem);
-        word-wrap: break-word;
-        overflow-wrap: break-word;
+        animation: fadeInUp 0.8s ease-out 0.2s both;
+        font-family: var(--font-display);
+    }
+
+    .hero-title .gradient-text {
+        font-weight: 800;
     }
 
     .hero-subtitle {
-        font-size: clamp(1.25rem, 3vw, 1.75rem);
+        font-size: var(--font-size-xl);
         color: var(--text-secondary);
-        font-weight: 300;
-        margin-bottom: 3rem;
-        opacity: 0;
-        animation: fadeInUp 0.8s ease 0.4s forwards;
-        padding: 0 clamp(1rem, 3vw, 1.5rem);
-        max-width: 90%;
-        margin-left: auto;
-        margin-right: auto;
+        max-width: 700px;
+        margin: 0 auto 3rem;
+        line-height: 1.6;
+        animation: fadeInUp 0.8s ease-out 0.4s both;
     }
 
-    .hero-cta {
+    .hero-actions {
         display: flex;
-        gap: 1.5rem;
+        gap: 1rem;
         justify-content: center;
         flex-wrap: wrap;
-        opacity: 0;
-        animation: fadeInUp 0.8s ease 0.6s forwards;
+        animation: fadeInUp 0.8s ease-out 0.6s both;
     }
 
     .hero-stats {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-        gap: 2rem;
-        max-width: 600px;
-        margin: 4rem auto 0;
-        opacity: 0;
-        animation: fadeInUp 0.8s ease 0.8s forwards;
+        display: flex;
+        gap: 3rem;
+        justify-content: center;
+        margin-top: 4rem;
+        flex-wrap: wrap;
+        animation: fadeInUp 0.8s ease-out 0.8s both;
     }
 
     .stat-item {
@@ -106,258 +96,46 @@
     }
 
     .stat-value {
-        font-size: 2.5rem;
+        font-size: var(--font-size-3xl);
         font-weight: 800;
-        color: var(--text-primary);
-        letter-spacing: -0.02em;
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        display: block;
+        font-family: var(--font-display);
     }
 
     .stat-label {
-        font-size: 0.875rem;
+        font-size: var(--font-size-sm);
         color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.05em;
-    }
-
-    /* Sections - 2025 Dynamic Spacing */
-    .section {
-        padding: clamp(3rem, 8vw, 6rem) 0;
-        padding-left: max(0px, env(safe-area-inset-left));
-        padding-right: max(0px, env(safe-area-inset-right));
-    }
-
-    .section-header {
-        text-align: center;
-        margin-bottom: 4rem;
-    }
-
-    .section-title {
-        font-size: clamp(2rem, 5vw, 3rem);
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        margin-bottom: 1rem;
-        padding: 0 clamp(1rem, 3vw, 1.5rem);
-    }
-
-    .section-description {
-        font-size: clamp(1rem, 2.5vw, 1.25rem);
-        color: var(--text-secondary);
-        max-width: min(600px, 90%);
-        margin: 0 auto;
-        padding: 0 clamp(1rem, 3vw, 1.5rem);
-    }
-
-    /* Featured Cards Grid - 2025 Enhanced */
-    .featured-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
-        gap: clamp(1.5rem, 3vw, 2rem);
-        margin-bottom: clamp(2rem, 4vw, 3rem);
-    }
-
-    .featured-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
-        padding: clamp(1.5rem, 4vw, 2rem);
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .featured-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 3px;
-        background: linear-gradient(90deg, var(--accent) 0%, var(--text-secondary) 100%);
-        opacity: 0;
-        transform: scaleX(0);
-        transform-origin: left;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .featured-card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
-        border-color: var(--border);
-    }
-
-    .featured-card:hover::before {
-        opacity: 1;
-        transform: scaleX(1);
-    }
-
-    .featured-date {
-        font-size: 0.875rem;
-        color: var(--text-muted);
-        margin-bottom: 0.75rem;
-    }
-
-    .featured-title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin-bottom: 1rem;
-        color: var(--text-primary);
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .featured-excerpt {
-        color: var(--text-secondary);
-        line-height: 1.6;
-        margin-bottom: 1.5rem;
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .featured-link {
-        color: var(--accent);
-        text-decoration: none;
-        font-weight: 500;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: var(--transition);
-    }
-
-    .featured-link:hover {
-        gap: 1rem;
-        color: var(--accent);
-    }
-
-    /* Project Card Special */
-    .project-card {
-        position: relative;
-        overflow: hidden;
-    }
-
-    .project-image {
-        width: 100%;
-        height: 200px;
-        margin: -2rem -2rem 1.5rem;
-        background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 3rem;
-        color: white;
-        font-weight: 900;
-    }
-
-    .project-tech {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 1rem;
-    }
-
-    .tech-tag {
-        padding: 0.25rem 0.625rem;
-        background: var(--bg-secondary);
-        border-radius: var(--radius);
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-        font-weight: 500;
-        border: 1px solid var(--border);
-    }
-
-    /* Skills Section */
-    .skills-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 3rem;
-        margin-top: 3rem;
-    }
-
-    .skill-category {
-        text-align: center;
-    }
-
-    .skill-icon {
-        width: 60px;
-        height: 60px;
-        margin: 0 auto 1.5rem;
-        background: var(--bg-secondary);
-        border-radius: var(--radius-lg);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        border: 1px solid var(--border);
-    }
-
-    .skill-category-title {
-        font-size: 1.25rem;
         font-weight: 600;
-        margin-bottom: 1rem;
+        margin-top: 0.5rem;
     }
 
-    .skill-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        justify-content: center;
+    .scroll-indicator {
+        position: absolute;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        animation: bounce 2s infinite;
+        cursor: pointer;
+        opacity: 0.6;
+        transition: opacity 0.3s;
     }
 
-    .skill-item {
-        padding: 0.5rem 1rem;
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        font-size: 0.875rem;
-        color: var(--text-secondary);
-        transition: var(--transition);
+    .scroll-indicator:hover {
+        opacity: 1;
     }
 
-    .skill-item:hover {
-        background: var(--accent);
-        color: var(--bg-primary);
-        border-color: var(--accent);
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+        40% { transform: translateX(-50%) translateY(-10px); }
+        60% { transform: translateX(-50%) translateY(-5px); }
     }
 
-    [data-theme="dark"] .skill-item:hover {
-        color: #000000;
-    }
-
-    /* CTA Section */
-    .cta-section {
-        background: var(--bg-secondary);
-        padding: 5rem 0;
-        text-align: center;
-        border-top: 1px solid var(--border);
-        border-bottom: 1px solid var(--border);
-    }
-
-    .cta-title {
-        font-size: 2.5rem;
-        font-weight: 800;
-        margin-bottom: 1rem;
-    }
-
-    .cta-description {
-        font-size: 1.25rem;
-        color: var(--text-secondary);
-        margin-bottom: 2rem;
-    }
-
-    .cta-buttons {
-        display: flex;
-        gap: 1.5rem;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-
-    /* Animations */
     @keyframes fadeInUp {
         from {
             opacity: 0;
@@ -369,83 +147,528 @@
         }
     }
 
-    @keyframes float {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
-    .float {
-        animation: float 3s ease-in-out infinite;
+    /* Section Styles */
+    .section {
+        padding: var(--spacing-2xl) var(--spacing-md);
+        position: relative;
     }
 
-    /* Responsive - Enhanced for 2025 */
+    .section-header {
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto 4rem;
+    }
+
+    .section-label {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--border-glass);
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+        color: var(--accent-primary);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 1rem;
+    }
+
+    .section-title {
+        font-size: var(--font-size-3xl);
+        font-weight: 800;
+        margin-bottom: 1rem;
+        font-family: var(--font-display);
+    }
+
+    .section-description {
+        font-size: var(--font-size-lg);
+        color: var(--text-secondary);
+        line-height: 1.6;
+    }
+
+    /* About Section */
+    .about-grid {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr 1.5fr;
+        gap: 3rem;
+        align-items: start;
+    }
+
+    .about-card {
+        background: var(--bg-card);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 2.5rem;
+        box-shadow: var(--shadow-lg);
+        transition: var(--transition);
+    }
+
+    .about-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+    }
+
+    .profile-section {
+        text-align: center;
+    }
+
+    .profile-avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: var(--accent-gradient);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        font-weight: 800;
+        color: white;
+        margin: 0 auto 1.5rem;
+        box-shadow: var(--shadow-glow);
+    }
+
+    .profile-name {
+        font-size: var(--font-size-2xl);
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        font-family: var(--font-display);
+    }
+
+    .profile-title {
+        font-size: var(--font-size-base);
+        color: var(--accent-primary);
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+    }
+
+    .profile-bio {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 2rem;
+    }
+
+    .profile-contact {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .contact-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: var(--transition);
+    }
+
+    .contact-item:hover {
+        color: var(--accent-primary);
+        transform: translateX(4px);
+    }
+
+    .skills-grid {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .skill-category {
+        background: var(--bg-card);
+        backdrop-filter: blur(16px) saturate(180%);
+        -webkit-backdrop-filter: blur(16px) saturate(180%);
+        padding: 2rem;
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--border);
+        transition: var(--transition-spring);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .skill-category::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--accent-gradient);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .skill-category:hover {
+        border-color: var(--accent-primary);
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl), var(--shadow-glow);
+    }
+
+    .skill-category:hover::before {
+        transform: scaleX(1);
+    }
+
+    .skill-category-title {
+        font-size: var(--font-size-lg);
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-family: var(--font-display);
+        color: var(--text-primary);
+    }
+
+    .skill-category-title svg {
+        color: var(--accent-primary);
+    }
+
+    .skill-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.625rem;
+    }
+
+    .skill-tag {
+        padding: 0.5rem 1rem;
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--border-glass);
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        color: var(--text-secondary);
+        transition: var(--transition);
+        cursor: pointer;
+    }
+
+    .skill-tag:hover {
+        background: var(--accent-primary);
+        color: white;
+        border-color: var(--accent-primary);
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: var(--shadow-glow);
+    }
+
+    /* Featured Work Section */
+    .work-grid {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 2rem;
+    }
+
+    .work-card {
+        background: var(--bg-card);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        transition: var(--transition-spring);
+        cursor: pointer;
+        position: relative;
+    }
+
+    .work-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: var(--shadow-xl), var(--shadow-glow);
+        border-color: var(--accent-primary);
+    }
+
+    .work-card-featured {
+        grid-column: span 2;
+    }
+
+    .work-thumbnail {
+        width: 100%;
+        height: 250px;
+        background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .work-card-featured .work-thumbnail {
+        height: 350px;
+    }
+
+    .work-thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: var(--transition-slow);
+    }
+
+    .work-card:hover .work-thumbnail img {
+        transform: scale(1.1);
+    }
+
+    .work-thumbnail-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 5rem;
+        font-weight: 900;
+        color: rgba(255,255,255,0.3);
+    }
+
+    .work-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.5rem 1rem;
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--accent-primary);
+        z-index: 2;
+    }
+
+    [data-theme="dark"] .work-badge {
+        background: rgba(20,20,20,0.95);
+    }
+
+    .work-content {
+        padding: 2rem;
+    }
+
+    .work-title {
+        font-size: var(--font-size-xl);
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        font-family: var(--font-display);
+    }
+
+    .work-description {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+    }
+
+    .work-tech {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .tech-badge {
+        padding: 0.25rem 0.75rem;
+        background: var(--bg-secondary);
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    .work-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .work-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--accent-primary);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: var(--font-size-sm);
+        transition: var(--transition);
+    }
+
+    .work-link:hover {
+        transform: translateX(4px);
+    }
+
+    .work-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-size: var(--font-size-sm);
+        color: var(--text-muted);
+    }
+
+    /* Latest Articles Section */
+    .articles-grid {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+    }
+
+    .article-card {
+        background: var(--bg-card);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        transition: var(--transition-spring);
+        cursor: pointer;
+        text-decoration: none;
+        display: block;
+    }
+
+    .article-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-xl), var(--shadow-glow);
+        border-color: var(--accent-primary);
+    }
+
+    .article-meta-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.5rem 1.5rem 0;
+        font-size: var(--font-size-sm);
+        color: var(--text-muted);
+    }
+
+    .article-category {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: var(--accent-primary);
+        color: white;
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .article-card-content {
+        padding: 1.5rem;
+    }
+
+    .article-title {
+        font-size: var(--font-size-xl);
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        color: var(--text-primary);
+        font-family: var(--font-display);
+    }
+
+    .article-excerpt {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .article-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .article-read-more {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--accent-primary);
+        font-weight: 600;
+        font-size: var(--font-size-sm);
+        transition: var(--transition);
+    }
+
+    .article-card:hover .article-read-more {
+        transform: translateX(4px);
+    }
+
+    /* CTA Section */
+    .cta-section {
+        background: var(--bg-card);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 4rem 2rem;
+        max-width: 900px;
+        margin: 0 auto;
+        text-align: center;
+        box-shadow: var(--shadow-xl);
+    }
+
+    .cta-title {
+        font-size: var(--font-size-3xl);
+        font-weight: 800;
+        margin-bottom: 1rem;
+        font-family: var(--font-display);
+    }
+
+    .cta-description {
+        font-size: var(--font-size-lg);
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .cta-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+        .work-card-featured {
+            grid-column: span 1;
+        }
+    }
+
     @media (max-width: 768px) {
-        .featured-grid {
-            grid-template-columns: 1fr;
-            gap: clamp(1.5rem, 4vw, 2rem);
-        }
-
-        /* Fix button spacing on mobile */
-        .hero-cta {
-            padding: 0 clamp(1rem, 4vw, 1.5rem);
-            gap: 1rem;
-        }
-
-        .hero-cta .btn {
-            width: 100%;
-            max-width: 280px;
-            padding: 0.875rem 1.5rem;
-            font-size: 1rem;
-            min-height: 48px; /* Touch-friendly size */
-        }
-
-        /* Fix stats overflow on mobile */
-        .hero-stats {
-            gap: clamp(1rem, 3vw, 1.5rem);
-            padding: 0 clamp(1rem, 4vw, 1.5rem);
-        }
-
-        .stat-value {
-            font-size: clamp(1.75rem, 5vw, 2rem);
-        }
-
-        .container {
-            padding: 0 clamp(1rem, 4vw, 2rem);
-            padding-left: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-left));
-            padding-right: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-right));
-        }
-    }
-
-    /* Specific adjustments for iPhone-sized screens */
-    @media (max-width: 450px) {
-        .hero-content {
-            padding: clamp(1rem, 5vw, 2rem);
-        }
-
         .hero-title {
-            padding: 0 0.75rem;
-            line-height: 1.15;
+            font-size: var(--font-size-3xl);
         }
 
         .hero-stats {
-            gap: 1rem;
-            padding: 0 1rem;
+            gap: 2rem;
         }
 
-        .stat-value {
-            font-size: 1.75rem;
+        .about-grid {
+            grid-template-columns: 1fr;
         }
 
-        .stat-label {
-            font-size: 0.75rem;
+        .work-grid, .articles-grid {
+            grid-template-columns: 1fr;
         }
-    }
 
-    /* Safe area support for notched devices */
-    @supports (padding: max(0px)) {
-        .hero, .section, .container {
-            padding-left: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-left));
-            padding-right: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-right));
+        .section {
+            padding: var(--spacing-xl) var(--spacing-sm);
         }
     }
 </style>
@@ -454,179 +677,458 @@
 {% block content %}
 <!-- Hero Section -->
 <section class="hero">
-    <div class="hero-background"></div>
     <div class="hero-content">
-        <p class="hero-greeting">Hello, I'm</p>
-        <h1 class="hero-title">{{ profile.full_name|default:"Aishwarya Bhargava" }}</h1>
-        <p class="hero-subtitle">{{ profile.title|default:"Full Stack Developer & Software Engineer" }}</p>
+        <div class="hero-label">
+            <span class="hero-label-dot"></span>
+            Available for Opportunities
+        </div>
 
-        <div class="hero-cta">
-            <a href="/projects/" class="btn">View Projects</a>
-            <a href="/blog/" class="btn btn-outline">Read Blog</a>
-            <a href="/cv/" class="btn btn-outline">Download CV</a>
+        <h1 class="hero-title">
+            <span class="gradient-text">Full Stack AI Engineer</span><br>
+            Building Intelligent Solutions
+        </h1>
+
+        <p class="hero-subtitle">
+            Crafting cutting-edge applications that blend artificial intelligence with exceptional user experiences. Specializing in machine learning, web development, and scalable architectures.
+        </p>
+
+        <div class="hero-actions">
+            <a href="{% url 'projects:list' %}" class="btn">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                </svg>
+                View Projects
+            </a>
+            <a href="{% url 'core:cv' %}" class="btn btn-outline">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Resume
+            </a>
         </div>
 
         <div class="hero-stats">
             <div class="stat-item">
-                <div class="stat-value">{{ total_projects|default:0 }}</div>
-                <div class="stat-label">Projects</div>
+                <span class="stat-value" data-target="{{ total_projects|default:0 }}">0</span>
+                <span class="stat-label">Projects</span>
             </div>
             <div class="stat-item">
-                <div class="stat-value">{{ total_posts|default:0 }}</div>
-                <div class="stat-label">Blog Posts</div>
+                <span class="stat-value" data-target="{{ total_posts|default:0 }}">0</span>
+                <span class="stat-label">Articles</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" data-target="{{ years_experience|default:5 }}">0</span>
+                <span class="stat-label">Years Exp</span>
             </div>
         </div>
     </div>
-</section>
 
-<!-- Featured Projects Section -->
-{% if featured_projects %}
-<section class="section">
-    <div class="container">
-        <div class="section-header">
-            <h2 class="section-title">Featured Projects</h2>
-            <p class="section-description">
-                Recent work and open-source contributions
-            </p>
-        </div>
-
-        <div class="featured-grid">
-            {% for project in featured_projects %}
-            <div class="featured-card project-card" onclick="window.location.href='/projects/{{ project.slug }}/'">
-                <div class="project-image">
-                    {% if project.thumbnail %}
-                        <img src="{{ project.thumbnail.url }}" alt="{{ project.title }}" style="width: 100%; height: 100%; object-fit: cover;">
-                    {% else %}
-                        {{ project.title|first }}
-                    {% endif %}
-                </div>
-                <h3 class="featured-title">{{ project.title }}</h3>
-                <p class="featured-excerpt">{{ project.short_description }}</p>
-
-                <div class="project-tech">
-                    {% for tech in project.technologies.all|slice:":4" %}
-                    <span class="tech-tag">{{ tech.name }}</span>
-                    {% endfor %}
-                </div>
-
-                <a href="/projects/{{ project.slug }}/" class="featured-link" onclick="event.stopPropagation()">
-                    View Project →
-                </a>
-            </div>
-            {% endfor %}
-        </div>
-
-        <div style="text-align: center;">
-            <a href="/projects/" class="btn btn-outline">View All Projects</a>
-        </div>
-    </div>
-</section>
-{% endif %}
-
-<!-- Latest Blog Posts -->
-{% if featured_posts %}
-<section class="section" style="background: var(--bg-secondary);">
-    <div class="container">
-        <div class="section-header">
-            <h2 class="section-title">Latest Articles</h2>
-            <p class="section-description">
-                Thoughts on technology, development, and design
-            </p>
-        </div>
-
-        <div class="featured-grid">
-            {% for post in featured_posts %}
-            <div class="featured-card" onclick="window.location.href='/blog/{{ post.slug }}/'">
-                <div class="featured-date">{{ post.published_date|date:"F d, Y" }}</div>
-                <h3 class="featured-title">{{ post.title }}</h3>
-                <p class="featured-excerpt">{{ post.excerpt|default:post.content|striptags|truncatewords:30 }}</p>
-                <a href="/blog/{{ post.slug }}/" class="featured-link" onclick="event.stopPropagation()">
-                    Read More →
-                </a>
-            </div>
-            {% endfor %}
-        </div>
-
-        <div style="text-align: center;">
-            <a href="/blog/" class="btn btn-outline">View All Posts</a>
-        </div>
-    </div>
-</section>
-{% endif %}
-
-<!-- Skills Section -->
-<section class="section">
-    <div class="container">
-        <div class="section-header">
-            <h2 class="section-title">Technical Skills</h2>
-            <p class="section-description">
-                Technologies and tools I work with
-            </p>
-        </div>
-
-        <div class="skills-grid">
-            {% if skill_categories %}
-                {% for category, skills_list in skill_categories.items %}
-                <div class="skill-category">
-                    <div class="skill-icon">{{ skills_list.0.icon|default:category|slice:":2"|upper }}</div>
-                    <h3 class="skill-category-title">{{ category }}</h3>
-                    <div class="skill-list">
-                        {% for skill in skills_list %}
-                        <span class="skill-item">{{ skill.name }}</span>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted">No skills available yet. Add some in the admin panel!</p>
-            {% endif %}
-        </div>
+    <div class="scroll-indicator" onclick="document.querySelector('.section').scrollIntoView({behavior: 'smooth'})">
+        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+        </svg>
     </div>
 </section>
 
 <!-- About Section -->
 <section class="section">
-    <div class="container">
-        <div class="section-header">
-            <h2 class="section-title">About Me</h2>
+    <div class="about-grid">
+        <!-- Profile Card -->
+        <div class="profile-section">
+            <div class="about-card">
+                <div class="profile-avatar">AB</div>
+                <h2 class="profile-name">Aishwarya Bhargava</h2>
+                <p class="profile-title">Full Stack AI Engineer</p>
+                <p class="profile-bio">
+                    Passionate about building intelligent systems that solve real-world problems. I combine deep technical expertise with creative problem-solving to deliver exceptional results.
+                </p>
+                <div class="profile-contact">
+                    <a href="mailto:your@email.com" class="contact-item">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        your@email.com
+                    </a>
+                    <a href="#" class="contact-item">
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                        </svg>
+                        GitHub
+                    </a>
+                    <a href="#" class="contact-item">
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                        </svg>
+                        LinkedIn
+                    </a>
+                </div>
+            </div>
         </div>
 
-        <div style="max-width: 800px; margin: 0 auto; text-align: center;">
-            <p style="font-size: 1.25rem; line-height: 1.8; color: var(--text-secondary); margin-bottom: 2rem;">
-                {{ profile.bio|default:"I'm a passionate full-stack developer with expertise in building scalable web applications. I love working with modern technologies and solving complex problems." }}
-            </p>
+        <!-- Skills Card -->
+        <div class="skills-grid">
+            <div class="skill-category">
+                <h3 class="skill-category-title">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 2C6.5 2 4.5 4 4.5 6.5V9.5C4.5 12 6.5 14 9 14H14.5C17 14 19 12 19 9.5V6.5C19 4 17 2 14.5 2H9Z M11.75 9H6.75V7.5H11.75V9Z M17.25 7.5H12.25V9H17.25V7.5Z M4.5 16.5C4.5 14 6.5 12 9 12H14.5C17 12 19 14 19 16.5V19.5C19 22 17 24 14.5 24H9C6.5 24 4.5 22 4.5 19.5V16.5Z"/>
+                    </svg>
+                    AI & Machine Learning
+                </h3>
+                <div class="skill-list">
+                    <span class="skill-tag">TensorFlow</span>
+                    <span class="skill-tag">PyTorch</span>
+                    <span class="skill-tag">Scikit-learn</span>
+                    <span class="skill-tag">Hugging Face</span>
+                    <span class="skill-tag">OpenAI</span>
+                    <span class="skill-tag">LangChain</span>
+                </div>
+            </div>
 
-            {% if profile.location %}
-            <p style="color: var(--text-muted); margin-bottom: 2rem;">
-                📍 {{ profile.location }}
-            </p>
-            {% endif %}
+            <div class="skill-category">
+                <h3 class="skill-category-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                    </svg>
+                    Backend Development
+                </h3>
+                <div class="skill-list">
+                    <span class="skill-tag">Python</span>
+                    <span class="skill-tag">Django</span>
+                    <span class="skill-tag">FastAPI</span>
+                    <span class="skill-tag">Node.js</span>
+                    <span class="skill-tag">PostgreSQL</span>
+                    <span class="skill-tag">MongoDB</span>
+                </div>
+            </div>
 
-            <div style="display: flex; gap: 1rem; justify-content: center;">
-                {% if GITHUB_URL %}
-                <a href="{{ GITHUB_URL }}" target="_blank" class="btn btn-outline">GitHub</a>
-                {% endif %}
-                {% if LINKEDIN_URL %}
-                <a href="{{ LINKEDIN_URL }}" target="_blank" class="btn btn-outline">LinkedIn</a>
-                {% endif %}
-                {% if TWITTER_URL %}
-                <a href="{{ TWITTER_URL }}" target="_blank" class="btn btn-outline">Twitter</a>
-                {% endif %}
+            <div class="skill-category">
+                <h3 class="skill-category-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+                    </svg>
+                    Frontend Development
+                </h3>
+                <div class="skill-list">
+                    <span class="skill-tag">React</span>
+                    <span class="skill-tag">TypeScript</span>
+                    <span class="skill-tag">Next.js</span>
+                    <span class="skill-tag">Tailwind CSS</span>
+                    <span class="skill-tag">Vue.js</span>
+                </div>
+            </div>
+
+            <div class="skill-category">
+                <h3 class="skill-category-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                    </svg>
+                    DevOps & Cloud
+                </h3>
+                <div class="skill-list">
+                    <span class="skill-tag">Docker</span>
+                    <span class="skill-tag">Kubernetes</span>
+                    <span class="skill-tag">AWS</span>
+                    <span class="skill-tag">GCP</span>
+                    <span class="skill-tag">CI/CD</span>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- CTA Section -->
-<section class="cta-section">
-    <div class="container">
-        <h2 class="cta-title">Let's Work Together</h2>
-        <p class="cta-description">
-            I'm always interested in hearing about new opportunities and projects
+<!-- Featured Work Section -->
+<section class="section">
+    <div class="section-header">
+        <span class="section-label">Featured Work</span>
+        <h2 class="section-title">Selected Projects</h2>
+        <p class="section-description">
+            A showcase of my best work spanning AI applications, web platforms, and open-source contributions.
         </p>
-        <div class="cta-buttons">
-            <a href="mailto:{{ CONTACT_EMAIL|default:'hello@example.com' }}" class="btn">Get In Touch</a>
-            <a href="/cv/" class="btn btn-outline">View Resume</a>
+    </div>
+
+    <div class="work-grid">
+        {% if featured_projects %}
+            {% for project in featured_projects %}
+            <article class="work-card {% if forloop.first %}work-card-featured{% endif %}" onclick="window.location.href='{% url 'projects:detail' project.slug %}'">
+                <div class="work-thumbnail">
+                    {% if project.thumbnail %}
+                    <img src="{{ project.thumbnail.url }}" alt="{{ project.title }}">
+                    {% else %}
+                    <div class="work-thumbnail-placeholder">{{ project.title|first }}</div>
+                    {% endif %}
+                    {% if project.featured %}
+                    <span class="work-badge">Featured</span>
+                    {% endif %}
+                </div>
+                <div class="work-content">
+                    <h3 class="work-title">{{ project.title }}</h3>
+                    <p class="work-description">
+                        {{ project.short_description|default:project.description|truncatewords:20 }}
+                    </p>
+                    <div class="work-tech">
+                        {% for tech in project.technologies.all|slice:":5" %}
+                        <span class="tech-badge">{{ tech.name }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="work-footer">
+                        <span class="work-link">
+                            View Project
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                        </span>
+                        <div class="work-meta">
+                            <span>{{ project.view_count }} views</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+        {% else %}
+            <div class="work-card work-card-featured">
+                <div class="work-thumbnail">
+                    <div class="work-thumbnail-placeholder">AI</div>
+                    <span class="work-badge">Featured</span>
+                </div>
+                <div class="work-content">
+                    <h3 class="work-title">AI-Powered Analytics Platform</h3>
+                    <p class="work-description">
+                        Built a comprehensive analytics platform leveraging machine learning for predictive insights and automated reporting.
+                    </p>
+                    <div class="work-tech">
+                        <span class="tech-badge">Python</span>
+                        <span class="tech-badge">TensorFlow</span>
+                        <span class="tech-badge">React</span>
+                        <span class="tech-badge">PostgreSQL</span>
+                    </div>
+                    <div class="work-footer">
+                        <span class="work-link">
+                            View Project
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                        </span>
+                        <div class="work-meta">
+                            <span>1.2k views</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="work-card">
+                <div class="work-thumbnail">
+                    <div class="work-thumbnail-placeholder">NL</div>
+                </div>
+                <div class="work-content">
+                    <h3 class="work-title">Natural Language Processing API</h3>
+                    <p class="work-description">
+                        Developed a scalable NLP API service for text analysis, sentiment detection, and entity recognition.
+                    </p>
+                    <div class="work-tech">
+                        <span class="tech-badge">Python</span>
+                        <span class="tech-badge">FastAPI</span>
+                        <span class="tech-badge">Hugging Face</span>
+                        <span class="tech-badge">Docker</span>
+                    </div>
+                    <div class="work-footer">
+                        <span class="work-link">
+                            View Project
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                        </span>
+                        <div class="work-meta">
+                            <span>850 views</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="work-card">
+                <div class="work-thumbnail">
+                    <div class="work-thumbnail-placeholder">RT</div>
+                </div>
+                <div class="work-content">
+                    <h3 class="work-title">Real-time Collaboration Tool</h3>
+                    <p class="work-description">
+                        Created a real-time collaborative workspace with AI-powered suggestions and smart automation.
+                    </p>
+                    <div class="work-tech">
+                        <span class="tech-badge">Next.js</span>
+                        <span class="tech-badge">TypeScript</span>
+                        <span class="tech-badge">WebSocket</span>
+                        <span class="tech-badge">Redis</span>
+                    </div>
+                    <div class="work-footer">
+                        <span class="work-link">
+                            View Project
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                        </span>
+                        <div class="work-meta">
+                            <span>620 views</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div style="text-align: center; margin-top: 3rem;">
+        <a href="{% url 'projects:list' %}" class="btn btn-outline">
+            View All Projects
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+            </svg>
+        </a>
+    </div>
+</section>
+
+<!-- Latest Articles Section -->
+<section class="section">
+    <div class="section-header">
+        <span class="section-label">Latest Writing</span>
+        <h2 class="section-title">Recent Articles</h2>
+        <p class="section-description">
+            Insights, tutorials, and thoughts on AI, web development, and software engineering.
+        </p>
+    </div>
+
+    <div class="articles-grid">
+        {% if featured_posts %}
+            {% for post in featured_posts|slice:":3" %}
+            <a href="{% url 'blog:detail' post.slug %}" class="article-card">
+                <div class="article-meta-header">
+                    <span class="article-category">{{ post.category.name }}</span>
+                    <span>{{ post.read_time }} min read</span>
+                </div>
+                <div class="article-card-content">
+                    <h3 class="article-title">{{ post.title }}</h3>
+                    <p class="article-excerpt">
+                        {{ post.content|striptags|truncatewords:20 }}
+                    </p>
+                    <div class="article-footer">
+                        <span class="article-read-more">
+                            Read More
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                        </span>
+                        <span style="font-size: var(--font-size-sm); color: var(--text-muted);">
+                            {{ post.published_date|date:"M d, Y" }}
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <a href="#" class="article-card">
+                <div class="article-meta-header">
+                    <span class="article-category">AI/ML</span>
+                    <span>5 min read</span>
+                </div>
+                <div class="article-card-content">
+                    <h3 class="article-title">Building Production-Ready AI Applications</h3>
+                    <p class="article-excerpt">
+                        A comprehensive guide to taking your machine learning models from prototype to production-ready applications...
+                    </p>
+                    <div class="article-footer">
+                        <span class="article-read-more">
+                            Read More
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                        </span>
+                        <span style="font-size: var(--font-size-sm); color: var(--text-muted);">
+                            Oct 28, 2025
+                        </span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="#" class="article-card">
+                <div class="article-meta-header">
+                    <span class="article-category">Web Dev</span>
+                    <span>8 min read</span>
+                </div>
+                <div class="article-card-content">
+                    <h3 class="article-title">Modern Frontend Architecture Patterns</h3>
+                    <p class="article-excerpt">
+                        Exploring the latest architectural patterns and best practices for building scalable frontend applications...
+                    </p>
+                    <div class="article-footer">
+                        <span class="article-read-more">
+                            Read More
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                        </span>
+                        <span style="font-size: var(--font-size-sm); color: var(--text-muted);">
+                            Oct 25, 2025
+                        </span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="#" class="article-card">
+                <div class="article-meta-header">
+                    <span class="article-category">Tutorial</span>
+                    <span>12 min read</span>
+                </div>
+                <div class="article-card-content">
+                    <h3 class="article-title">Introduction to Large Language Models</h3>
+                    <p class="article-excerpt">
+                        Understanding how LLMs work, their capabilities, and practical applications in modern software development...
+                    </p>
+                    <div class="article-footer">
+                        <span class="article-read-more">
+                            Read More
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                        </span>
+                        <span style="font-size: var(--font-size-sm); color: var(--text-muted);">
+                            Oct 20, 2025
+                        </span>
+                    </div>
+                </div>
+            </a>
+        {% endif %}
+    </div>
+
+    <div style="text-align: center; margin-top: 3rem;">
+        <a href="{% url 'blog:list' %}" class="btn btn-outline">
+            View All Articles
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+            </svg>
+        </a>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="section">
+    <div class="cta-section">
+        <h2 class="cta-title">
+            Let's Build Something <span class="gradient-text">Amazing</span>
+        </h2>
+        <p class="cta-description">
+            I'm always interested in hearing about new projects, opportunities, or just having a chat about technology and innovation.
+        </p>
+        <div class="cta-actions">
+            <a href="mailto:your@email.com" class="btn">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                </svg>
+                Get In Touch
+            </a>
+            <a href="{% url 'core:cv' %}" class="btn btn-outline">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Download Resume
+            </a>
         </div>
     </div>
 </section>
@@ -634,58 +1136,72 @@
 
 {% block extra_scripts %}
 <script>
-    // Add intersection observer for scroll animations
+    // Animated Counter for Stats
+    function animateCounter(element) {
+        const target = parseInt(element.getAttribute('data-target'));
+        const duration = 2000;
+        const increment = target / (duration / 16);
+        let current = 0;
+
+        const updateCounter = () => {
+            current += increment;
+            if (current < target) {
+                element.textContent = Math.floor(current);
+                requestAnimationFrame(updateCounter);
+            } else {
+                element.textContent = target;
+            }
+        };
+
+        updateCounter();
+    }
+
+    // Intersection Observer for animations
     const observerOptions = {
-        root: null,
-        rootMargin: '0px',
-        threshold: 0.1
+        threshold: 0.2,
+        rootMargin: '0px 0px -100px 0px'
     };
 
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
+            if (entry.isIntersecting && !entry.target.classList.contains('animated')) {
+                entry.target.classList.add('animated');
+
+                // Animate stat counters
+                if (entry.target.classList.contains('stat-value')) {
+                    animateCounter(entry.target);
+                }
+
+                // Fade in cards
+                if (entry.target.classList.contains('work-card') ||
+                    entry.target.classList.contains('article-card') ||
+                    entry.target.classList.contains('about-card') ||
+                    entry.target.classList.contains('skill-category')) {
+                    entry.target.style.opacity = '0';
+                    entry.target.style.transform = 'translateY(30px)';
+                    entry.target.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+
+                    setTimeout(() => {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }, 100);
+                }
             }
         });
     }, observerOptions);
 
-    // Observe all sections
-    document.querySelectorAll('.section').forEach(section => {
-        section.style.opacity = '0';
-        section.style.transform = 'translateY(30px)';
-        section.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
-        observer.observe(section);
-    });
-
-    // Counter animation for stats
-    function animateCounter(element, target) {
-        let current = 0;
-        const increment = target / 50;
-        const timer = setInterval(() => {
-            current += increment;
-            if (current >= target) {
-                element.textContent = target;
-                clearInterval(timer);
-            } else {
-                element.textContent = Math.floor(current);
-            }
-        }, 20);
-    }
-
-    // Animate stat counters when in view
-    const statObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting && !entry.target.animated) {
-                const value = parseInt(entry.target.textContent);
-                animateCounter(entry.target, value);
-                entry.target.animated = true;
-            }
+    // Observe all animated elements
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.stat-value, .work-card, .article-card, .about-card, .skill-category').forEach(el => {
+            observer.observe(el);
         });
-    }, observerOptions);
 
-    document.querySelectorAll('.stat-value').forEach(stat => {
-        statObserver.observe(stat);
+        // Track page view
+        if (window.trackGA4Event) {
+            trackGA4Event('view_home', {
+                'content_type': 'landing_page'
+            });
+        }
     });
 </script>
 {% endblock %}

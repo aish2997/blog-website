@@ -4,37 +4,60 @@
 
 {% block extra_head %}
 <style>
-    /* Hero Section */
+    /* Hero Section - Glassmorphic */
     .projects-hero {
-        padding: 5rem 0 2.5rem;
+        padding: 8rem 0 3rem;
         margin-top: 0;
         background: var(--bg-primary);
-        border-bottom: 1px solid var(--border);
+        position: relative;
     }
 
     .projects-hero-content {
         text-align: center;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .hero-label {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--border-glass);
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+        color: var(--accent-primary);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 1.5rem;
     }
 
     .projects-title {
-        font-size: 3.5rem;
-        font-weight: 900;
+        font-size: var(--font-size-4xl);
+        font-weight: 800;
         letter-spacing: -0.04em;
         margin-bottom: 1rem;
-        background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+        font-family: var(--font-display);
+    }
+
+    .projects-title .gradient-text {
+        background: var(--accent-gradient);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
     }
 
     .projects-description {
-        font-size: 1.25rem;
+        font-size: var(--font-size-lg);
         color: var(--text-secondary);
         max-width: 600px;
-        margin: 0 auto 2rem;
+        margin: 0 auto 3rem;
+        line-height: 1.6;
     }
 
-    /* Filter Bar */
+    /* Filter Bar - Glassmorphic */
     .filter-bar {
         display: flex;
         justify-content: center;
@@ -44,24 +67,31 @@
     }
 
     .tech-filter {
-        padding: 0.5rem 1rem;
-        background: transparent;
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
+        padding: 0.625rem 1.5rem;
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--border-glass);
+        border-radius: var(--radius-full);
         color: var(--text-secondary);
         text-decoration: none;
         font-size: 0.9rem;
-        font-weight: 500;
-        transition: var(--transition);
+        font-weight: 600;
+        transition: var(--transition-spring);
         cursor: pointer;
     }
 
-    .tech-filter:hover,
-    .tech-filter.active {
-        background: var(--accent);
-        color: var(--bg-primary);
-        border-color: var(--accent);
+    .tech-filter:hover {
+        color: var(--accent-primary);
+        border-color: var(--accent-primary);
         transform: translateY(-2px);
+    }
+
+    .tech-filter.active {
+        background: var(--accent-primary);
+        color: white;
+        border-color: var(--accent-primary);
+        box-shadow: var(--shadow-glow);
     }
 
     /* Projects Grid */
@@ -72,47 +102,31 @@
         padding: 4rem 0;
     }
 
-    /* Project Card - 2025 Enhanced Design */
+    /* Project Card - Glassmorphic Design */
     .project-card {
         background: var(--bg-card);
+        backdrop-filter: blur(16px) saturate(180%);
+        -webkit-backdrop-filter: blur(16px) saturate(180%);
         border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
+        border-radius: var(--radius-xl);
         overflow: hidden;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: var(--transition-spring);
         cursor: pointer;
         display: flex;
         flex-direction: column;
         position: relative;
     }
 
-    .project-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--text-primary) 0%, var(--text-secondary) 100%);
-        transform: scaleX(0);
-        transform-origin: left;
-        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 1;
-    }
-
     .project-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.18);
-        border-color: var(--border);
-    }
-
-    .project-card:hover::before {
-        transform: scaleX(1);
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: var(--shadow-xl), var(--shadow-glow);
+        border-color: var(--accent-primary);
     }
 
     .project-thumbnail {
         width: 100%;
         height: 250px;
-        background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+        background: var(--accent-gradient);
         position: relative;
         overflow: hidden;
     }
@@ -160,26 +174,23 @@
         top: 1rem;
         right: 1rem;
         padding: 0.5rem 1rem;
-        background: rgba(255, 255, 255, 0.95);
-        color: var(--text-primary);
-        border-radius: var(--radius-sm);
+        background: var(--accent-primary);
+        color: white;
+        border-radius: var(--radius-full);
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.1em;
         backdrop-filter: blur(10px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: var(--shadow-glow);
+        transition: var(--transition);
         z-index: 2;
     }
 
-    [data-theme="dark"] .project-featured-badge {
-        background: rgba(0, 0, 0, 0.95);
-    }
-
     .project-card:hover .project-featured-badge {
-        transform: scale(1.05);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
     }
 
     .project-content {
@@ -195,11 +206,12 @@
         margin-bottom: 1rem;
         color: var(--text-primary);
         line-height: 1.2;
-        transition: color 0.3s ease;
+        font-family: var(--font-display);
+        transition: var(--transition);
     }
 
     .project-card:hover .project-name {
-        color: var(--text-primary);
+        color: var(--accent-primary);
     }
 
     .project-description {
@@ -222,24 +234,23 @@
 
     .tech-badge {
         padding: 0.375rem 0.75rem;
-        background: var(--bg-secondary);
-        border-radius: var(--radius);
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--border-glass);
+        border-radius: var(--radius-full);
         font-size: 0.8rem;
         color: var(--text-secondary);
-        font-weight: 500;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .project-card:hover .tech-badge {
-        background: var(--bg-secondary);
-        color: var(--text-primary);
-        transform: translateY(-1px);
+        font-weight: 600;
+        transition: var(--transition);
     }
 
     .tech-badge:hover {
-        background: var(--accent);
-        color: var(--bg-primary);
+        background: var(--accent-primary);
+        color: white;
+        border-color: var(--accent-primary);
         transform: translateY(-2px) scale(1.05);
+        box-shadow: var(--shadow-glow);
     }
 
     .project-footer {
@@ -256,23 +267,31 @@
     }
 
     .project-link {
-        display: flex;
+        display: inline-flex;
         align-items: center;
         gap: 0.5rem;
+        padding: 0.5rem 1rem;
         color: var(--text-secondary);
         text-decoration: none;
-        font-size: 0.9rem;
-        font-weight: 500;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-size: 0.875rem;
+        font-weight: 600;
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--border-glass);
+        border-radius: var(--radius-full);
+        transition: var(--transition);
     }
 
     .project-link:hover {
-        color: var(--text-primary);
-        transform: translateY(-1px);
+        color: var(--accent-primary);
+        border-color: var(--accent-primary);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-glow);
     }
 
     .project-link svg {
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: var(--transition);
     }
 
     .project-link:hover svg {
@@ -293,17 +312,24 @@
         gap: 0.25rem;
     }
 
-    /* Empty State */
+    /* Empty State - Glassmorphic */
     .empty-state {
         text-align: center;
         padding: 6rem 2rem;
+        background: var(--glass-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--border-glass);
+        border-radius: var(--radius-xl);
+        margin: 2rem 0;
     }
 
     .empty-icon {
         width: 120px;
         height: 120px;
         margin: 0 auto 2rem;
-        opacity: 0.15;
+        color: var(--accent-primary);
+        opacity: 0.3;
     }
 
     .empty-title {
@@ -311,11 +337,13 @@
         font-weight: 700;
         margin-bottom: 1rem;
         color: var(--text-primary);
+        font-family: var(--font-display);
     }
 
     .empty-description {
-        color: var(--text-muted);
+        color: var(--text-secondary);
         font-size: 1.125rem;
+        line-height: 1.6;
     }
 
     /* Search Bar */
@@ -332,28 +360,37 @@
 
     .search-input {
         flex: 1;
-        padding: 0.75rem 1rem 0.75rem 2.5rem;
+        padding: 1rem 1.25rem 1rem 3rem;
         border: 2px solid var(--border);
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-full);
         font-size: 1rem;
-        background: var(--bg-primary);
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
         color: var(--text-primary);
         transition: var(--transition);
     }
 
     .search-input:focus {
         outline: none;
-        border-color: var(--accent);
+        border-color: var(--accent-primary);
+        box-shadow: var(--shadow-glow);
+        background: var(--bg-card);
+    }
+
+    .search-input::placeholder {
+        color: var(--text-muted);
     }
 
     .search-icon {
         position: absolute;
-        left: 0.75rem;
+        left: 1.25rem;
         top: 50%;
         transform: translateY(-50%);
-        width: 20px;
-        height: 20px;
-        color: var(--text-muted);
+        width: 18px;
+        height: 18px;
+        color: var(--accent-primary);
+        pointer-events: none;
     }
 
     /* Responsive */
@@ -379,9 +416,12 @@
 <section class="projects-hero">
     <div class="container">
         <div class="projects-hero-content">
-            <h1 class="projects-title">Projects</h1>
+            <span class="hero-label">Portfolio</span>
+            <h1 class="projects-title">
+                My <span class="gradient-text">Projects</span>
+            </h1>
             <p class="projects-description">
-                A collection of my open-source projects and professional work
+                Exploring AI, full-stack development, and innovative solutions through hands-on projects
             </p>
 
             <!-- Search Bar -->
