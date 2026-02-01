@@ -1,0 +1,158 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      revision:
+        description: 'Revision to rollback to (e.g., portfolio-staging-00005-abc). Leave empty to rollback to previous revision.'
+        required: false
+        type: string
+      reason:
+        description: 'Reason for rollback'
+        required: true
+        type: string
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ secrets.GCP_REGION || 'us-central1' }}
+
+jobs:
+  rollback:
+    name: Rollback ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get Service Name
+        id: service
+        run: |
+          SERVICE_NAME="portfolio-${{ github.event.inputs.environment }}"
+          echo "name=${SERVICE_NAME}" >> $GITHUB_OUTPUT
+          echo "Service: ${SERVICE_NAME}"
+
+      - name: List Recent Revisions
+        id: revisions
+        run: |
+          echo "### Recent Revisions for ${{ steps.service.outputs.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          gcloud run revisions list \
+            --service=${{ steps.service.outputs.name }} \
+            --region=${{ env.REGION }} \
+            --format="table(name,status.conditions[0].status,metadata.creationTimestamp)" \
+            --limit=10
+
+          # Get current and previous revision
+          CURRENT=$(gcloud run services describe ${{ steps.service.outputs.name }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.traffic[0].revisionName)')
+
+          echo "current=${CURRENT}" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Current Revision:** \`${CURRENT}\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Determine Target Revision
+        id: target
+        run: |
+          TARGET_REVISION="${{ github.event.inputs.revision }}"
+
+          if [ -z "${TARGET_REVISION}" ]; then
+            echo "No specific revision provided, finding previous revision..."
+
+            # Get list of revisions, skip current, take next one
+            CURRENT="${{ steps.revisions.outputs.current }}"
+
+            TARGET_REVISION=$(gcloud run revisions list \
+              --service=${{ steps.service.outputs.name }} \
+              --region=${{ env.REGION }} \
+              --format='value(name)' \
+              --limit=5 | grep -v "^${CURRENT}$" | head -1)
+
+            if [ -z "${TARGET_REVISION}" ]; then
+              echo "❌ No previous revision found to rollback to"
+              exit 1
+            fi
+          fi
+
+          echo "revision=${TARGET_REVISION}" >> $GITHUB_OUTPUT
+          echo "**Target Revision:** \`${TARGET_REVISION}\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Verify Target Revision Exists
+        run: |
+          echo "Verifying revision ${{ steps.target.outputs.revision }} exists..."
+
+          if ! gcloud run revisions describe ${{ steps.target.outputs.revision }} \
+            --region=${{ env.REGION }} 2>/dev/null; then
+            echo "❌ Revision ${{ steps.target.outputs.revision }} not found"
+            exit 1
+          fi
+
+          echo "✅ Revision verified"
+
+      - name: Execute Rollback
+        run: |
+          echo "Rolling back to ${{ steps.target.outputs.revision }}..."
+
+          gcloud run services update-traffic ${{ steps.service.outputs.name }} \
+            --region=${{ env.REGION }} \
+            --to-revisions=${{ steps.target.outputs.revision }}=100
+
+          echo "✅ Traffic shifted to ${{ steps.target.outputs.revision }}"
+
+      - name: Verify Rollback
+        run: |
+          echo "Verifying rollback..."
+
+          # Get service URL
+          URL=$(gcloud run services describe ${{ steps.service.outputs.name }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)')
+
+          echo "Testing ${URL}/health/..."
+
+          # Test health endpoint
+          response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "${URL}/health/")
+
+          if [ "$response" -eq 200 ]; then
+            echo "✅ Rollback verified - service is healthy"
+          else
+            echo "⚠️ Health check returned HTTP ${response}"
+          fi
+
+      - name: Rollback Summary
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Rollback Complete 🔄" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | ${{ github.event.inputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Service** | ${{ steps.service.outputs.name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Previous Revision** | ${{ steps.revisions.outputs.current }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Target Revision** | ${{ steps.target.outputs.revision }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Reason** | ${{ github.event.inputs.reason }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Initiated By** | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Timestamp** | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY

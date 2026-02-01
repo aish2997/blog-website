@@ -53,16 +53,14 @@ USER appuser
 
 # Collect static files during build (including Django admin static files)
 # This ensures admin static files are baked into the image
-# Note: We use a build-time-only SECRET_KEY since it's not used for security during collectstatic
-ENV SECRET_KEY="build-time-key-only-for-collectstatic-not-for-production"
-RUN python manage.py collectstatic --noinput --clear && \
+# Use ARG for build-time-only SECRET_KEY (never persisted in image layers)
+ARG BUILD_SECRET_KEY="build-time-key-only-for-collectstatic"
+RUN SECRET_KEY="${BUILD_SECRET_KEY}" python manage.py collectstatic --noinput --clear && \
     # Verify that admin static files were collected successfully
     test -d /app/staticfiles/admin && \
     test -f /app/staticfiles/admin/css/base.css && \
     echo "✅ Admin static files verified" || \
     (echo "❌ Admin static files missing!" && exit 1)
-# Clear the build-time SECRET_KEY so it's not in the final image
-ENV SECRET_KEY=""
 
 # Add a health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \

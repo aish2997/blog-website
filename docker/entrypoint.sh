@@ -71,27 +71,32 @@ fi
 if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ] && [ -n "$DJANGO_SUPERUSER_EMAIL" ]; then
     echo "Ensuring admin superuser exists..."
 
-    # Use a Python script for safer credential handling
+    # Use a Python script that reads credentials from environment variables directly
+    # This prevents credentials from appearing in process listings or shell history
     SUPERUSER_CREATED=$(python manage.py shell -c "
-from django.contrib.auth import get_user_model
+import os
 import sys
+from django.contrib.auth import get_user_model
 
 User = get_user_model()
-username = '$DJANGO_SUPERUSER_USERNAME'
-created = False
+username = os.environ.get('DJANGO_SUPERUSER_USERNAME')
+email = os.environ.get('DJANGO_SUPERUSER_EMAIL')
+password = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
+
+if not all([username, email, password]):
+    print('error: missing credentials', file=sys.stderr)
+    sys.exit(1)
 
 try:
     if User.objects.filter(username=username).exists():
         print('exists')
     else:
-        # Create the superuser
         User.objects.create_superuser(
             username=username,
-            email='$DJANGO_SUPERUSER_EMAIL',
-            password='$DJANGO_SUPERUSER_PASSWORD'
+            email=email,
+            password=password
         )
         print('created')
-        created = True
 except Exception as e:
     print(f'error: {e}', file=sys.stderr)
     sys.exit(1)
@@ -115,9 +120,9 @@ except Exception as e:
 else
     echo "⚠️  Admin credentials not provided via Secret Manager. Admin panel will not be accessible."
     echo "   Configure these secrets in Google Secret Manager:"
-    echo "   - django-superuser-username"
-    echo "   - django-superuser-password"
-    echo "   - django-superuser-email"
+    echo "   - django-superuser-username-{environment}"
+    echo "   - django-superuser-password-{environment}"
+    echo "   - django-superuser-email-{environment}"
 fi
 
 # Final backup to ensure latest state is saved (SQLite only)

@@ -8,6 +8,27 @@ import environ
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Sentry error tracking (initialize early to catch all errors)
+SENTRY_DSN = os.environ.get('SENTRY_DSN')
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        # Set traces_sample_rate to 1.0 to capture 100% of transactions for performance monitoring.
+        # Adjust this value in production.
+        traces_sample_rate=float(os.environ.get('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
+        # Set profiles_sample_rate to 1.0 to profile 100% of sampled transactions.
+        profiles_sample_rate=float(os.environ.get('SENTRY_PROFILES_SAMPLE_RATE', '0.1')),
+        # Send user info to Sentry (email, username) for debugging
+        send_default_pii=True,
+        # Environment tag
+        environment=os.environ.get('ENVIRONMENT', 'production'),
+    )
+    print("✅ Sentry error tracking initialized")
+
 # Initialize environment variables
 env = environ.Env()
 
@@ -66,7 +87,18 @@ if not IS_COLLECTING_STATIC:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+# ALLOWED_HOSTS - Fail if not configured (except during collectstatic)
+_allowed_hosts = os.environ.get('ALLOWED_HOSTS', '')
+if not _allowed_hosts or _allowed_hosts == '*':
+    if not IS_COLLECTING_STATIC:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured(
+            "ALLOWED_HOSTS must be explicitly set in production. "
+            "Set the ALLOWED_HOSTS environment variable to a comma-separated list of allowed hosts."
+        )
+    ALLOWED_HOSTS = ['*']
+else:
+    ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts.split(',')]
 
 # Application definition
 INSTALLED_APPS = [
@@ -104,6 +136,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'csp.middleware.CSPMiddleware',  # Content Security Policy
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -308,6 +341,28 @@ SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
 
+# Additional Security Headers
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+# Content Security Policy (CSP) - requires django-csp
+# Configured via django-csp middleware settings
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://storage.googleapis.com")
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'", "https://storage.googleapis.com")
+CSP_FONT_SRC = ("'self'", "https://fonts.gstatic.com", "https://storage.googleapis.com")
+CSP_IMG_SRC = ("'self'", "data:", "https:", "https://storage.googleapis.com")
+CSP_CONNECT_SRC = ("'self'", "https://storage.googleapis.com")
+CSP_FRAME_ANCESTORS = ("'none'",)
+CSP_FORM_ACTION = ("'self'",)
+
+# Permissions Policy
+PERMISSIONS_POLICY = {
+    'geolocation': [],
+    'microphone': [],
+    'camera': [],
+    'payment': [],
+}
+
 # CSRF settings for Cloud Run
 CSRF_TRUSTED_ORIGINS = []
 
@@ -401,8 +456,13 @@ SITE_CONFIG = {
     'profile_image': os.environ.get('PROFILE_IMAGE_PATH', 'profile.jpg'),
 }
 
-# Email configuration
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Email configuration - configurable backend for production SMTP support
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@example.com')
 
 # django-allauth Configuration

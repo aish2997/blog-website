@@ -122,17 +122,16 @@ resource "google_service_account" "cloud_run" {
   description  = "Service account for Cloud Run portfolio application"
 }
 
-# Grant GitHub Actions SA necessary permissions
+# Grant GitHub Actions SA necessary permissions (principle of least privilege)
 resource "google_project_iam_member" "github_actions_roles" {
   for_each = toset([
     "roles/run.admin",
     "roles/storage.admin",
     "roles/artifactregistry.writer",
-    "roles/cloudsql.admin",
-    "roles/secretmanager.admin",
+    "roles/cloudsql.client",               # Reduced from cloudsql.admin
+    "roles/secretmanager.secretAccessor",  # Reduced from secretmanager.admin
     "roles/iam.serviceAccountUser",
-    "roles/compute.networkAdmin",
-    "roles/resourcemanager.projectIamAdmin",
+    "roles/compute.networkViewer",         # Reduced from compute.networkAdmin
     "roles/vpcaccess.admin",
   ])
 

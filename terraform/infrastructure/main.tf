@@ -102,6 +102,27 @@ resource "google_cloud_run_service" "portfolio" {
           }
         }
 
+        # Startup probe - allows time for Django initialization
+        startup_probe {
+          http_get {
+            path = "/health/"
+          }
+          initial_delay_seconds = 5
+          timeout_seconds       = 3
+          period_seconds        = 5
+          failure_threshold     = 10
+        }
+
+        # Liveness probe - checks ongoing health
+        liveness_probe {
+          http_get {
+            path = "/health/"
+          }
+          period_seconds    = 30
+          timeout_seconds   = 3
+          failure_threshold = 3
+        }
+
         env {
           name  = "DJANGO_SETTINGS_MODULE"
           value = var.django_settings_module

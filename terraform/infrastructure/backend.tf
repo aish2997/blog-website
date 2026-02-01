@@ -1,6 +1,6 @@
 terraform {
   backend "gcs" {
-    # bucket will be configured via -backend-config in GitHub Actions
-    prefix = "infrastructure"
+    # bucket and prefix will be configured via -backend-config in GitHub Actions
+    # prefix format: infrastructure-{environment} (e.g., infrastructure-staging, infrastructure-production)
   }
 }

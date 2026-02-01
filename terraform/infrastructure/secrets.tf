@@ -3,7 +3,7 @@
 
 # Django SECRET_KEY - critical for security
 resource "google_secret_manager_secret" "django_secret_key" {
-  secret_id = "django-secret-key"
+  secret_id = "django-secret-key-${var.environment}"
 
   labels = {
     environment = var.environment
@@ -18,7 +18,7 @@ resource "google_secret_manager_secret" "django_secret_key" {
 
 # Django superuser credentials
 resource "google_secret_manager_secret" "django_superuser_username" {
-  secret_id = "django-superuser-username"
+  secret_id = "django-superuser-username-${var.environment}"
 
   labels = {
     environment = var.environment
@@ -32,7 +32,7 @@ resource "google_secret_manager_secret" "django_superuser_username" {
 }
 
 resource "google_secret_manager_secret" "django_superuser_password" {
-  secret_id = "django-superuser-password"
+  secret_id = "django-superuser-password-${var.environment}"
 
   labels = {
     environment = var.environment
@@ -46,7 +46,7 @@ resource "google_secret_manager_secret" "django_superuser_password" {
 }
 
 resource "google_secret_manager_secret" "django_superuser_email" {
-  secret_id = "django-superuser-email"
+  secret_id = "django-superuser-email-${var.environment}"
 
   labels = {
     environment = var.environment
@@ -61,7 +61,7 @@ resource "google_secret_manager_secret" "django_superuser_email" {
 
 # Neon PostgreSQL database connection URL
 resource "google_secret_manager_secret" "neon_database_url" {
-  secret_id = "neon-database-url"
+  secret_id = "neon-database-url-${var.environment}"
 
   labels = {
     environment = var.environment
@@ -112,12 +112,15 @@ output "secret_instructions" {
 IMPORTANT: After running Terraform, you must manually add secret values in GCP:
 
 1. Go to Google Cloud Console > Security > Secret Manager
-2. Add values for these secrets:
-   - ${google_secret_manager_secret.django_secret_key.name}: Generate using: python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
-   - ${google_secret_manager_secret.django_superuser_username.name}: Your desired admin username
-   - ${google_secret_manager_secret.django_superuser_password.name}: A strong password for admin
-   - ${google_secret_manager_secret.django_superuser_email.name}: Admin email address
-   - ${google_secret_manager_secret.neon_database_url.name}: Your Neon PostgreSQL connection string (postgresql://...)
+2. Add values for these environment-specific secrets:
+   - ${google_secret_manager_secret.django_secret_key.secret_id}: Generate using: python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
+   - ${google_secret_manager_secret.django_superuser_username.secret_id}: Your desired admin username
+   - ${google_secret_manager_secret.django_superuser_password.secret_id}: A strong password for admin
+   - ${google_secret_manager_secret.django_superuser_email.secret_id}: Admin email address
+   - ${google_secret_manager_secret.neon_database_url.secret_id}: Your Neon PostgreSQL connection string (postgresql://...)
+
+Note: Secrets are environment-specific (e.g., django-secret-key-staging, django-secret-key-production)
+This allows separate credentials for staging and production environments.
 
 3. After adding values, redeploy the Cloud Run service to pick up the secrets
 ================================================================================

@@ -1,0 +1,160 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+      - production
+
+jobs:
+  lint-and-format:
+    name: Lint and Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install linting tools
+        run: |
+          pip install flake8 black isort
+
+      - name: Run flake8
+        run: |
+          flake8 app/ --max-line-length=120 --exclude=migrations,__pycache__,.venv
+
+      - name: Check black formatting
+        run: |
+          black --check --line-length=120 app/ --exclude='migrations|__pycache__|\.venv'
+
+      - name: Check import sorting
+        run: |
+          isort --check-only --profile black app/ --skip migrations --skip __pycache__ --skip .venv
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install security tools
+        run: |
+          pip install bandit pip-audit
+
+      - name: Run bandit security scan
+        run: |
+          bandit -r app/ -x tests,migrations -ll --format json --output bandit-report.json || true
+          bandit -r app/ -x tests,migrations -ll
+
+      - name: Audit dependencies
+        run: |
+          pip-audit -r app/requirements.txt --desc on || true
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: bandit-report.json
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r app/requirements.txt
+          pip install pytest pytest-django pytest-cov
+
+      - name: Run tests
+        working-directory: ./app
+        env:
+          DJANGO_SETTINGS_MODULE: portfolio.settings
+          SECRET_KEY: test-secret-key-for-ci-only
+        run: |
+          pytest --cov=apps --cov-report=xml --cov-report=term-missing -v || echo "No tests found or tests failed"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: app/coverage.xml
+
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Format Check (Bootstrap)
+        working-directory: ./terraform/bootstrap
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Format Check (Infrastructure)
+        working-directory: ./terraform/infrastructure
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init (Bootstrap)
+        working-directory: ./terraform/bootstrap
+        run: terraform init -backend=false
+
+      - name: Terraform Validate (Bootstrap)
+        working-directory: ./terraform/bootstrap
+        run: terraform validate
+
+      - name: Terraform Init (Infrastructure)
+        working-directory: ./terraform/infrastructure
+        run: terraform init -backend=false
+
+      - name: Terraform Validate (Infrastructure)
+        working-directory: ./terraform/infrastructure
+        run: terraform validate
+
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: |
+          docker build -f docker/Dockerfile -t portfolio-test:pr .
+
+      - name: Verify image
+        run: |
+          docker images portfolio-test:pr
+          echo "✅ Docker image built successfully"

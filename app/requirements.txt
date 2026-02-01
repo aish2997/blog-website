@@ -29,6 +29,10 @@ django-taggit==5.0.1
 # Security
 django-cors-headers==4.3.1
 django-ratelimit==4.1.0
+django-csp==3.8  # Content Security Policy headers
+
+# Error tracking
+sentry-sdk[django]==1.40.0
 
 # Caching
 django-redis==5.4.0

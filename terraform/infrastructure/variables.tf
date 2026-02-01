@@ -54,9 +54,9 @@ variable "django_settings_module" {
 }
 
 variable "django_allowed_hosts" {
-  description = "Django ALLOWED_HOSTS setting"
+  description = "Django ALLOWED_HOSTS setting - must be explicitly configured for production"
   type        = string
-  default     = "*"
+  # No default - must be explicitly set for security
 }
 
 # Docker Image
