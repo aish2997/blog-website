@@ -225,6 +225,14 @@ resource "google_cloud_run_service" "portfolio" {
       template[0].metadata[0].annotations["run.googleapis.com/client-version"],
     ]
   }
+
+  depends_on = [
+    google_secret_manager_secret_version.django_secret_key,
+    google_secret_manager_secret_version.neon_database_url,
+    google_secret_manager_secret_version.django_superuser_username,
+    google_secret_manager_secret_version.django_superuser_password,
+    google_secret_manager_secret_version.django_superuser_email,
+  ]
 }
 
 # Make Cloud Run service publicly accessible
