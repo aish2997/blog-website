@@ -338,6 +338,22 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Note: Only passing tag '${IMAGE_TAG_ONLY}' to avoid secret masking issues" >> $GITHUB_STEP_SUMMARY
 
+      - name: Set Terraform secret variables
+        run: |
+          if [ "${{ env.ENVIRONMENT }}" = "staging" ]; then
+            echo "TF_VAR_django_secret_key=${{ secrets.DJANGO_SECRET_KEY_STAGING }}" >> $GITHUB_ENV
+            echo "TF_VAR_neon_database_url=${{ secrets.NEON_DATABASE_URL_STAGING }}" >> $GITHUB_ENV
+            echo "TF_VAR_django_superuser_username=${{ secrets.DJANGO_SUPERUSER_USERNAME_STAGING }}" >> $GITHUB_ENV
+            echo "TF_VAR_django_superuser_password=${{ secrets.DJANGO_SUPERUSER_PASSWORD_STAGING }}" >> $GITHUB_ENV
+            echo "TF_VAR_django_superuser_email=${{ secrets.DJANGO_SUPERUSER_EMAIL_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "TF_VAR_django_secret_key=${{ secrets.DJANGO_SECRET_KEY_PRODUCTION }}" >> $GITHUB_ENV
+            echo "TF_VAR_neon_database_url=${{ secrets.NEON_DATABASE_URL_PRODUCTION }}" >> $GITHUB_ENV
+            echo "TF_VAR_django_superuser_username=${{ secrets.DJANGO_SUPERUSER_USERNAME_PRODUCTION }}" >> $GITHUB_ENV
+            echo "TF_VAR_django_superuser_password=${{ secrets.DJANGO_SUPERUSER_PASSWORD_PRODUCTION }}" >> $GITHUB_ENV
+            echo "TF_VAR_django_superuser_email=${{ secrets.DJANGO_SUPERUSER_EMAIL_PRODUCTION }}" >> $GITHUB_ENV
+          fi
+
       - name: Plan Infrastructure
         working-directory: ./terraform/infrastructure
         run: |

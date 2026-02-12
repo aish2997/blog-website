@@ -74,6 +74,32 @@ resource "google_secret_manager_secret" "neon_database_url" {
   }
 }
 
+# Secret versions - populate secrets with actual values from CI/CD
+resource "google_secret_manager_secret_version" "django_secret_key" {
+  secret      = google_secret_manager_secret.django_secret_key.id
+  secret_data = var.django_secret_key
+}
+
+resource "google_secret_manager_secret_version" "neon_database_url" {
+  secret      = google_secret_manager_secret.neon_database_url.id
+  secret_data = var.neon_database_url
+}
+
+resource "google_secret_manager_secret_version" "django_superuser_username" {
+  secret      = google_secret_manager_secret.django_superuser_username.id
+  secret_data = var.django_superuser_username
+}
+
+resource "google_secret_manager_secret_version" "django_superuser_password" {
+  secret      = google_secret_manager_secret.django_superuser_password.id
+  secret_data = var.django_superuser_password
+}
+
+resource "google_secret_manager_secret_version" "django_superuser_email" {
+  secret      = google_secret_manager_secret.django_superuser_email.id
+  secret_data = var.django_superuser_email
+}
+
 # Grant the Cloud Run service account access to read these secrets
 resource "google_secret_manager_secret_iam_member" "django_secret_key_access" {
   secret_id = google_secret_manager_secret.django_secret_key.secret_id
@@ -109,20 +135,17 @@ resource "google_secret_manager_secret_iam_member" "neon_database_url_access" {
 output "secret_instructions" {
   value = <<EOF
 ================================================================================
-IMPORTANT: After running Terraform, you must manually add secret values in GCP:
+Secret Manager secrets are automatically populated from CI/CD pipeline variables.
 
-1. Go to Google Cloud Console > Security > Secret Manager
-2. Add values for these environment-specific secrets:
-   - ${google_secret_manager_secret.django_secret_key.secret_id}: Generate using: python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
-   - ${google_secret_manager_secret.django_superuser_username.secret_id}: Your desired admin username
-   - ${google_secret_manager_secret.django_superuser_password.secret_id}: A strong password for admin
-   - ${google_secret_manager_secret.django_superuser_email.secret_id}: Admin email address
-   - ${google_secret_manager_secret.neon_database_url.secret_id}: Your Neon PostgreSQL connection string (postgresql://...)
+Environment-specific secrets managed:
+   - ${google_secret_manager_secret.django_secret_key.secret_id}
+   - ${google_secret_manager_secret.django_superuser_username.secret_id}
+   - ${google_secret_manager_secret.django_superuser_password.secret_id}
+   - ${google_secret_manager_secret.django_superuser_email.secret_id}
+   - ${google_secret_manager_secret.neon_database_url.secret_id}
 
-Note: Secrets are environment-specific (e.g., django-secret-key-staging, django-secret-key-production)
-This allows separate credentials for staging and production environments.
-
-3. After adding values, redeploy the Cloud Run service to pick up the secrets
+To update secret values, update the corresponding GitHub repository secrets
+and re-run the deployment workflow.
 ================================================================================
 EOF
 }

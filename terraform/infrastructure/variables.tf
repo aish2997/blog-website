@@ -64,3 +64,34 @@ variable "docker_image" {
   description = "Docker image to deploy"
   type        = string
 }
+
+# Secret Values (passed from CI/CD pipeline)
+variable "django_secret_key" {
+  description = "Django SECRET_KEY"
+  type        = string
+  sensitive   = true
+}
+
+variable "neon_database_url" {
+  description = "Neon PostgreSQL connection URL"
+  type        = string
+  sensitive   = true
+}
+
+variable "django_superuser_username" {
+  description = "Django superuser username"
+  type        = string
+  sensitive   = true
+}
+
+variable "django_superuser_password" {
+  description = "Django superuser password"
+  type        = string
+  sensitive   = true
+}
+
+variable "django_superuser_email" {
+  description = "Django superuser email"
+  type        = string
+  sensitive   = true
+}
