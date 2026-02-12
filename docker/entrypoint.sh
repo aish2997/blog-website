@@ -14,6 +14,29 @@ echo "GCS_BUCKET_STATIC: ${GCS_BUCKET_STATIC}"
 echo "K_SERVICE (Cloud Run): ${K_SERVICE:-Not running on Cloud Run}"
 echo "=================================="
 
+# Pre-flight: check critical env vars are set (print name + length, never values)
+echo "=== Pre-flight Environment Check ==="
+for var_name in SECRET_KEY DATABASE_URL ALLOWED_HOSTS DJANGO_SETTINGS_MODULE; do
+    eval var_value=\$$var_name
+    if [ -n "$var_value" ]; then
+        echo "OK: $var_name is set (${#var_value} chars)"
+    else
+        echo "MISSING: $var_name"
+    fi
+done
+echo "====================================="
+
+# Pre-flight: test Django settings import with full error capture
+echo "Testing Django settings import..."
+python -c "
+from django.conf import settings
+_ = settings.SECRET_KEY  # force lazy settings to load
+print('OK: Django settings imported successfully')
+" 2>&1 || {
+    echo "FATAL: Django settings failed to load. See error above."
+    exit 1
+}
+
 # Detect database type
 if [ -n "$DATABASE_URL" ]; then
     echo "✅ PostgreSQL database detected (DATABASE_URL is set)"

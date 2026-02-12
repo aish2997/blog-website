@@ -232,6 +232,11 @@ resource "google_cloud_run_service" "portfolio" {
     google_secret_manager_secret_version.django_superuser_username,
     google_secret_manager_secret_version.django_superuser_password,
     google_secret_manager_secret_version.django_superuser_email,
+    google_secret_manager_secret_iam_member.django_secret_key_access,
+    google_secret_manager_secret_iam_member.neon_database_url_access,
+    google_secret_manager_secret_iam_member.django_superuser_username_access,
+    google_secret_manager_secret_iam_member.django_superuser_password_access,
+    google_secret_manager_secret_iam_member.django_superuser_email_access,
   ]
 }
 
