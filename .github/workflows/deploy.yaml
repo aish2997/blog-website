@@ -287,7 +287,9 @@ jobs:
               exit 1
             fi
           else
-            DOCKER_IMAGE="${IMAGE_FROM_BUILD}"
+            # Extract just the tag from the build output (tag part won't be masked)
+            BUILD_TAG=$(echo "${IMAGE_FROM_BUILD}" | rev | cut -d':' -f1 | rev)
+            DOCKER_IMAGE="${IMAGE_REGISTRY}:${BUILD_TAG}"
             echo "✅ Using newly built image: ${DOCKER_IMAGE}"
           fi
 
@@ -358,7 +360,9 @@ jobs:
         working-directory: ./terraform/infrastructure
         run: |
           # Use the validated Docker image
-          DOCKER_IMAGE="${{ steps.docker_image.outputs.docker_image }}"
+          # Reconstruct Docker image URL from safe components to avoid secret masking
+          IMAGE_TAG="${{ steps.docker_image.outputs.docker_image_tag }}"
+          DOCKER_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/portfolio-images/portfolio:${IMAGE_TAG}"
 
           echo "Deploying with Docker image: ${DOCKER_IMAGE}"
 
