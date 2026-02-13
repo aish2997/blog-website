@@ -78,9 +78,13 @@ if not IS_COLLECTING_STATIC:
         raise ImproperlyConfigured("Build-time SECRET_KEY detected at runtime! Real SECRET_KEY must be provided by Cloud Run.")
 
     # Check for other placeholder values
-    if SECRET_KEY in ['INSECURE', 'CHANGEME', 'REPLACE', 'TODO', 'temporary-key-for-collectstatic-only'] or len(SECRET_KEY) < 50:
+    _placeholder_values = ['INSECURE', 'CHANGEME', 'REPLACE', 'TODO', 'temporary-key-for-collectstatic-only']
+    if SECRET_KEY in _placeholder_values or len(SECRET_KEY) < 50:
         from django.core.exceptions import ImproperlyConfigured
-        raise ImproperlyConfigured("SECRET_KEY appears to be a placeholder or too short. Please use a proper secret key!")
+        raise ImproperlyConfigured(
+            f"SECRET_KEY is invalid (length={len(SECRET_KEY)}, is_placeholder={SECRET_KEY in _placeholder_values}). "
+            "Must be 50+ chars and not a placeholder. Check DJANGO_SECRET_KEY_STAGING in GitHub Actions secrets."
+        )
 
     print("✅ SECRET_KEY loaded successfully from environment")
 

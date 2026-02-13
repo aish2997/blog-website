@@ -211,8 +211,7 @@ class HealthCheckView(View):
             health_status['checks']['database'] = 'connected'
         except Exception as e:
             health_status['checks']['database'] = f'error: {str(e)}'
-            # DB unreachable ≠ app unhealthy. Restarting won't fix a down database.
-            # The error is still reported in the JSON response for debugging.
+            is_healthy = False
 
         # Test static files (especially admin CSS)
         try:
