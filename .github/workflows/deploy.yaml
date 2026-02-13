@@ -356,6 +356,36 @@ jobs:
             echo "TF_VAR_django_superuser_email=${{ secrets.DJANGO_SUPERUSER_EMAIL_PRODUCTION }}" >> $GITHUB_ENV
           fi
 
+      - name: Validate critical secrets
+        run: |
+          echo "Validating critical deployment secrets..."
+          ERRORS=0
+
+          if [ ${#TF_VAR_django_secret_key} -lt 50 ]; then
+            echo "::error::DJANGO_SECRET_KEY_${ENVIRONMENT^^} is missing or too short (${#TF_VAR_django_secret_key} chars, need 50+). Go to: Settings → Secrets → Actions"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ django_secret_key: OK (${#TF_VAR_django_secret_key} chars)"
+          fi
+
+          if [ -z "$TF_VAR_neon_database_url" ]; then
+            echo "::error::NEON_DATABASE_URL_${ENVIRONMENT^^} is not set. Go to: Settings → Secrets → Actions"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ neon_database_url: OK (${#TF_VAR_neon_database_url} chars)"
+          fi
+
+          if [ -z "$TF_VAR_django_superuser_username" ]; then
+            echo "::warning::DJANGO_SUPERUSER_USERNAME_${ENVIRONMENT^^} is not set. Admin panel will be inaccessible."
+          fi
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "::error::${ERRORS} critical secret(s) failed validation. Fix them in GitHub → Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+
+          echo "All critical secrets validated."
+
       - name: Plan Infrastructure
         working-directory: ./terraform/infrastructure
         run: |

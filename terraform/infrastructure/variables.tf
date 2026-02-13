@@ -70,12 +70,22 @@ variable "django_secret_key" {
   description = "Django SECRET_KEY"
   type        = string
   sensitive   = true
+
+  validation {
+    condition     = length(var.django_secret_key) >= 50
+    error_message = "django_secret_key must be at least 50 characters. Check DJANGO_SECRET_KEY_STAGING (or _PRODUCTION) in GitHub Actions secrets."
+  }
 }
 
 variable "neon_database_url" {
   description = "Neon PostgreSQL connection URL"
   type        = string
   sensitive   = true
+
+  validation {
+    condition     = length(var.neon_database_url) > 0
+    error_message = "neon_database_url must not be empty. Check NEON_DATABASE_URL_STAGING (or _PRODUCTION) in GitHub Actions secrets."
+  }
 }
 
 variable "django_superuser_username" {
