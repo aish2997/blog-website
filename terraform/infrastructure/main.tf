@@ -107,10 +107,10 @@ resource "google_cloud_run_service" "portfolio" {
           http_get {
             path = "/health/"
           }
-          initial_delay_seconds = 5
+          initial_delay_seconds = 10
           timeout_seconds       = 3
           period_seconds        = 5
-          failure_threshold     = 10
+          failure_threshold     = 30
         }
 
         # Liveness probe - checks ongoing health

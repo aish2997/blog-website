@@ -49,11 +49,9 @@ else
     DATABASE_PATH=${DATABASE_PATH:-/tmp/db.sqlite3}
 fi
 
-# Validate Django configuration
-echo "Validating Django configuration..."
-python manage.py check --deploy 2>&1 || {
-    echo "⚠️ Django check reported issues (non-fatal)"
-}
+# Django deploy checks skipped at startup to reduce startup time
+# Run manually: python manage.py check --deploy
+echo "Skipping Django deploy checks (run manually if needed)"
 
 # Database initialization - different logic for PostgreSQL vs SQLite
 if [ "$USE_POSTGRESQL" = true ]; then
@@ -64,11 +62,9 @@ if [ "$USE_POSTGRESQL" = true ]; then
         exit 1
     }
 
-    # Clean orphaned comments (PostgreSQL only - safe to run)
-    echo "Cleaning orphaned comments..."
-    python manage.py clean_orphaned_comments 2>&1 || {
-        echo "Note: Orphaned comments cleanup completed or not needed"
-    }
+    # Orphaned comment cleanup skipped at startup to reduce startup time
+    # Run manually: python manage.py clean_orphaned_comments
+    echo "Skipping orphaned comments cleanup (run manually or via Cloud Run Job)"
 else
     # SQLite-specific logic (backup/restore)
     # Try to restore database from GCS first (if configured)
@@ -213,10 +209,10 @@ fi
 # Start the application with gunicorn
 # Configuration depends on database type
 if [ "$USE_POSTGRESQL" = true ]; then
-    # PostgreSQL: Can handle multiple workers and threads efficiently
-    echo "Starting Gunicorn with PostgreSQL-optimized configuration (4 workers, 4 threads)..."
+    # PostgreSQL: 2 workers + 4 threads balances concurrency with memory on 1 CPU
+    echo "Starting Gunicorn with PostgreSQL-optimized configuration (2 workers, 4 threads)..."
     exec gunicorn --bind :$PORT \
-        --workers 4 \
+        --workers 2 \
         --threads 4 \
         --timeout 120 \
         --access-logfile - \
