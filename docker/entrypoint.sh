@@ -56,10 +56,10 @@ echo "Skipping Django deploy checks (run manually if needed)"
 # Database initialization - different logic for PostgreSQL vs SQLite
 if [ "$USE_POSTGRESQL" = true ]; then
     echo "Running database migrations for PostgreSQL..."
-    python manage.py migrate --noinput || {
-        echo "❌ ERROR: Database migrations failed!"
+    timeout 60 python manage.py migrate --noinput || {
+        echo "⚠️ WARNING: Database migrations failed or timed out!"
         echo "Check DATABASE_URL and ensure PostgreSQL is accessible"
-        exit 1
+        echo "The application will start, but database-dependent features may not work"
     }
 
     # Orphaned comment cleanup skipped at startup to reduce startup time
@@ -92,7 +92,7 @@ if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ] &&
 
     # Use a Python script that reads credentials from environment variables directly
     # This prevents credentials from appearing in process listings or shell history
-    SUPERUSER_CREATED=$(python manage.py shell -c "
+    SUPERUSER_CREATED=$(timeout 30 python manage.py shell -c "
 import os
 import sys
 from django.contrib.auth import get_user_model
